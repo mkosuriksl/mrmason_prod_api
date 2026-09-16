@@ -1,0 +1,485 @@
+package com.application.mrmason.service.impl;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.stereotype.Service;
+
+import com.application.mrmason.entity.CustomerRegistration;
+import com.application.mrmason.entity.ServiceRequest;
+import com.application.mrmason.entity.ServiceStatusUpate;
+import com.application.mrmason.entity.User;
+import com.application.mrmason.entity.UserType;
+import com.application.mrmason.entity.WalkInServiceRequest;
+import com.application.mrmason.enums.RegSource;
+import com.application.mrmason.exceptions.ResourceNotFoundException;
+import com.application.mrmason.repository.CustomerAssetsRepo;
+import com.application.mrmason.repository.CustomerRegistrationRepo;
+import com.application.mrmason.repository.ServiceRequestRepo;
+import com.application.mrmason.repository.ServiceStatusUpateRepo;
+import com.application.mrmason.repository.UserDAO;
+import com.application.mrmason.repository.WalkInServiceRequestRepo;
+import com.application.mrmason.security.AuthDetailsProvider;
+import com.application.mrmason.service.ServiceRequestService;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+
+@Service
+public class ServiceRequestServiceImpl implements ServiceRequestService {
+	@Autowired
+	ServiceRequestRepo requestRepo;
+	@Autowired
+	public CustomerAssetsRepo assetRepo;
+	@Autowired
+	public CustomerRegistrationRepo repo;
+	@Autowired
+	ServiceStatusUpateRepo statusRepo;
+	@PersistenceContext
+	private EntityManager entityManager;
+
+	ServiceStatusUpate statusUpdate = new ServiceStatusUpate();
+	@Autowired
+	ModelMapper model;
+
+	@Autowired
+	CustomerRegistrationRepo Customerrepo;
+
+	@Autowired
+	private JavaMailSender mailsender;
+
+	@Autowired
+	private WalkInServiceRequestRepo walkInServiceRequestRepo;
+
+	@Autowired
+	private CustomerRegistrationRepo customerRegistrationRepo;
+
+	@Autowired
+	UserDAO userDAO;
+
+	@Override
+	public Object addRequest(ServiceRequest requestData, RegSource regSource) {
+
+		String loggedInUserEmail = AuthDetailsProvider.getLoggedEmail();
+		Collection<? extends GrantedAuthority> loggedInRole = AuthDetailsProvider.getLoggedRole();
+
+		List<String> roleNames = loggedInRole.stream().map(GrantedAuthority::getAuthority)
+				.map(role -> role.replace("ROLE_", "")).collect(Collectors.toList());
+
+		UserType userType = UserType.valueOf(roleNames.get(0));
+		String userId;
+		Date now = new Date();
+
+		if (userType == UserType.EC) {
+			CustomerRegistration customer = customerRegistrationRepo
+					.findByUserEmailAndUserType(loggedInUserEmail, userType)
+					.orElseThrow(() -> new ResourceNotFoundException("Customer not found: " + loggedInUserEmail));
+
+			userId = customer.getUserid();
+
+			ServiceRequest serviceRequest = ServiceRequest.builder()
+					.serviceSubCategory(requestData.getServiceSubCategory()).serviceName(requestData.getServiceName())
+					.requestedBy(requestData.getRequestedBy()).location(requestData.getLocation())
+					.description(requestData.getDescription()).assetId(requestData.getAssetId()).bookedBy(userId)
+					.build();
+			ServiceRequest saved = requestRepo.save(serviceRequest);
+			return saved;
+		} else if (userType == UserType.Developer) {
+			// Store in duplicate table
+			User user = userDAO.findByEmailAndUserTypeAndRegSource(loggedInUserEmail, userType, regSource)
+					.orElseThrow(() -> new ResourceNotFoundException("User not found: " + loggedInUserEmail));
+
+			userId = user.getBodSeqNo();
+			WalkInServiceRequest walkinserviceRequest = WalkInServiceRequest.builder()
+					.serviceSubCategory(requestData.getServiceSubCategory()).serviceName(requestData.getServiceName())
+					.requestedBy(requestData.getRequestedBy()).location(requestData.getLocation())
+					.description(requestData.getDescription()).assetId(requestData.getAssetId())
+					.bookedBy(user.getBodSeqNo()).status(requestData.getStatus())
+					.requestedMode("NEW").build();
+
+			WalkInServiceRequest saved = walkInServiceRequestRepo.save(walkinserviceRequest);
+			return saved;
+		}
+
+		throw new RuntimeException("Unsupported user type for adding request: " + userType);
+	}
+
+//	public ServiceRequest addRequest(ServiceRequest requestData) {
+//		Optional<CustomerAssets> serviceRequestData = assetRepo.findByUserIdAndAssetId(requestData.getRequestedBy(),
+//				requestData.getAssetId());
+//		if (serviceRequestData.isPresent()) {
+//			ServiceRequest service = requestRepo.save(requestData);
+//			statusUpdate.setServiceRequestId(service.getRequestId());
+//			statusUpdate.setUpdatedBy(service.getRequestedBy());
+//			statusRepo.save(statusUpdate);
+//			return service;
+//		}
+//		return null;
+//	}
+
+	@Override
+	public Page<ServiceRequest> getServiceReq(String userId, String assetId, String location, String serviceSubCategory,
+			String email, String mobile, String status, String fromDate, String toDate, int page, int size,
+			RegSource regSource) {
+
+		CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+
+		// 🧩 Step 1: If email or mobile provided, derive all matching userIds
+		List<String> filteredUserIds = new ArrayList<>();
+		if ((email != null && !email.isEmpty()) || (mobile != null && !mobile.isEmpty())) {
+			List<CustomerRegistration> customers = new ArrayList<>();
+
+			if (email != null && !email.isEmpty()) {
+				CustomerRegistration customer = repo.findByUserEmailAndRegSource(email, regSource);
+				if (customer != null)
+					customers.add(customer);
+			}
+
+			if (mobile != null && !mobile.isEmpty()) {
+				CustomerRegistration customer = repo.findByUserMobileAndRegSource(mobile, regSource);
+				if (customer != null)
+					customers.add(customer);
+			}
+
+			if (!customers.isEmpty()) {
+				filteredUserIds = customers.stream().map(CustomerRegistration::getUserid).distinct().toList();
+			} else {
+				return Page.empty(); // ❌ No match found for email/mobile
+			}
+		}
+
+		// 🧩 Step 2: Main query
+		CriteriaQuery<ServiceRequest> cq = cb.createQuery(ServiceRequest.class);
+		Root<ServiceRequest> root = cq.from(ServiceRequest.class);
+
+		List<Predicate> mainPredicates = buildPredicates(cb, root, userId, assetId, location, serviceSubCategory,
+				status, fromDate, toDate, filteredUserIds);
+
+		cq.where(mainPredicates.toArray(new Predicate[0]));
+		cq.orderBy(cb.desc(root.get("serviceRequestDate")));
+
+		List<ServiceRequest> allResults = entityManager.createQuery(cq).setFirstResult(page * size).setMaxResults(size)
+				.getResultList();
+
+		// 🧩 Step 3: Count query
+		CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
+		Root<ServiceRequest> countRoot = countQuery.from(ServiceRequest.class);
+		List<Predicate> countPredicates = buildPredicates(cb, countRoot, userId, assetId, location, serviceSubCategory,
+				status, fromDate, toDate, filteredUserIds);
+		countQuery.select(cb.count(countRoot)).where(countPredicates.toArray(new Predicate[0]));
+		Long total = entityManager.createQuery(countQuery).getSingleResult();
+
+		// 🧩 Step 4: Return paginated result
+		return new PageImpl<>(allResults, PageRequest.of(page, size), total);
+	}
+
+	private List<Predicate> buildPredicates(CriteriaBuilder cb, Root<ServiceRequest> root, String userId,
+			String assetId, String location, String serviceSubCategory, String status, String fromDate, String toDate,
+			List<String> filteredUserIds) {
+
+		List<Predicate> predicates = new ArrayList<>();
+
+		// ✅ Apply derived userId from email/mobile filter
+		if (filteredUserIds != null && !filteredUserIds.isEmpty()) {
+			predicates.add(root.get("requestedBy").in(filteredUserIds));
+		}
+		// ✅ Or apply direct userId filter
+		else if (userId != null && !userId.isEmpty()) {
+			predicates.add(cb.equal(root.get("requestedBy"), userId));
+		}
+
+		if (assetId != null && !assetId.isEmpty()) {
+			predicates.add(cb.equal(root.get("assetId"), assetId));
+		}
+		if (location != null && !location.isEmpty()) {
+			predicates.add(cb.equal(root.get("location"), location));
+		}
+
+//		if (location != null && !location.trim().isEmpty() && (userId == null || userId.isEmpty())) {
+//			List<CustomerRegistration> matchingCustomers = repo.findByUserTown(location.trim());
+//			if (!matchingCustomers.isEmpty()) {
+//				List<String> userIds = matchingCustomers.stream().map(CustomerRegistration::getUserid).toList();
+//				predicates.add(root.get("requestedBy").in(userIds));
+//			} else {
+//				predicates.add(cb.disjunction()); // no match, return empty
+//			}
+//		}
+
+		if (serviceSubCategory != null && !serviceSubCategory.isEmpty()) {
+			predicates.add(cb.equal(root.get("serviceName"), serviceSubCategory));
+		}
+
+		if (status != null && !status.isEmpty()) {
+			predicates.add(cb.equal(root.get("status"), status));
+		}
+
+		DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+		DateTimeFormatter dbFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+		if (fromDate != null) {
+			String formattedFrom = LocalDate.parse(fromDate, inputFormatter).format(dbFormatter);
+			predicates.add(cb.greaterThanOrEqualTo(root.get("serviceRequestDate"), formattedFrom));
+		}
+
+		if (toDate != null) {
+			String formattedTo = LocalDate.parse(toDate, inputFormatter).format(dbFormatter);
+			predicates.add(cb.lessThanOrEqualTo(root.get("serviceRequestDate"), formattedTo));
+		}
+
+		return predicates;
+	}
+
+//	@Override
+//	public List<ServiceRequest> getServiceReq(String userId,String assetId, String location, String serviceSubCategory,
+//			String email,String mobile,String status, String fromDate, String toDate) {
+//		CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+//	    CriteriaQuery<ServiceRequest> query = cb.createQuery(ServiceRequest.class);
+//	    Root<ServiceRequest> root = query.from(ServiceRequest.class);
+//	    List<Predicate> predicates = new ArrayList<>();
+//
+//	    // First: derive userId from email or mobile (if userId not directly passed)
+//	    if ((email != null || mobile != null) && userId == null) {
+//	        CustomerRegistration customer = null;
+//
+//	        if (email != null) {
+//	            customer = repo.findByUserEmail(email);
+//	        } else if (mobile != null) {
+//	            customer = repo.findByUserMobile(mobile);
+//	        }
+//
+//	        if (customer != null) {
+//	            userId = customer.getUserid(); // assign derived userId
+//	        } else {
+//	            // If no matching user found, return empty list
+//	            return new ArrayList<>();
+//	        }
+//	    }
+//
+//	    if (userId != null) {
+//	        predicates.add(cb.equal(root.get("requestedBy"), userId));
+//	    }
+//
+//	    if (assetId != null) {
+//	        predicates.add(cb.equal(root.get("assetId"), assetId));
+//	    }
+//	    if ((location != null && !location.trim().isEmpty()) && userId == null) {
+//	        List<CustomerRegistration> matchingCustomers = repo.findByUserTown(location.trim());
+//
+//	        if (!matchingCustomers.isEmpty()) {
+//	            List<String> userIds = matchingCustomers.stream().map(CustomerRegistration::getUserid).toList();
+//	            predicates.add(root.get("requestedBy").in(userIds));
+//	        } else {
+//	            return new ArrayList<>(); // no match
+//	        }
+//	    }
+//
+//	    System.out.println("Received location param: '" + location + "'");
+//
+//	    if (serviceSubCategory != null) {
+//	        predicates.add(cb.equal(root.get("serviceName"), serviceSubCategory));
+//	    }
+////	    if (serviceSubCategory != null) {
+////	        predicates.add(cb.equal(cb.lower(root.get("serviceName")), serviceSubCategory.toLowerCase()));
+////	    }
+//	    if (status != null) {
+//	        predicates.add(cb.equal(root.get("status"), status));
+//	    }
+//
+//	    DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+//	    DateTimeFormatter dbFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+//
+//	    if (fromDate != null) {
+//	        String formattedFrom = LocalDate.parse(fromDate, inputFormatter).format(dbFormatter);
+//	        predicates.add(cb.greaterThanOrEqualTo(root.get("serviceRequestDate"), formattedFrom));
+//	    }
+//
+//	    if (toDate != null) {
+//	        String formattedTo = LocalDate.parse(toDate, inputFormatter).format(dbFormatter);
+//	        predicates.add(cb.lessThanOrEqualTo(root.get("serviceRequestDate"), formattedTo));
+//	    }
+//
+//	    query.where(predicates.toArray(new Predicate[0]));
+//	    return entityManager.createQuery(query).getResultList();
+//	}
+
+//	@Override
+//	public Page<ServiceRequest> getServiceReq(
+//	        String userId, String assetId, String location, String serviceSubCategory,
+//	        String email, String mobile, String status, String fromDate, String toDate,
+//	        int page, int size,RegSource regSource) {
+//
+//	    // Derive userId from email or mobile if userId is not provided
+//	    if ((email != null || mobile != null) && userId == null) {
+//	        CustomerRegistration customer = null;
+//	        if (email != null) {
+//	            customer = repo.findByUserEmailAndRegSource(email,regSource);
+//	        } else if (mobile != null) {
+//	            customer = repo.findByUserMobileAndRegSource(mobile,regSource);
+//	        }
+//
+//	        if (customer != null) {
+//	            userId = customer.getUserid(); // assign derived userId
+//	        } else {
+//	            return Page.empty(); // no matching user found
+//	        }
+//	    }
+//
+//	    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+//
+//	    // Main query
+//	    CriteriaQuery<ServiceRequest> cq = cb.createQuery(ServiceRequest.class);
+//	    Root<ServiceRequest> root = cq.from(ServiceRequest.class);
+//	    List<Predicate> mainPredicates = buildPredicates(cb, root, userId, assetId, location,
+//	            serviceSubCategory, status, fromDate, toDate);
+//
+//	    cq.where(mainPredicates.toArray(new Predicate[0]));
+//	    cq.orderBy(cb.desc(root.get("serviceRequestDate")));
+//
+//	    List<ServiceRequest> allResults = entityManager.createQuery(cq)
+//	            .setFirstResult(page * size)
+//	            .setMaxResults(size)
+//	            .getResultList();
+//
+//	    // Count query
+//	    CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
+//	    Root<ServiceRequest> countRoot = countQuery.from(ServiceRequest.class);
+//	    List<Predicate> countPredicates = buildPredicates(cb, countRoot, userId, assetId, location,
+//	            serviceSubCategory, status, fromDate, toDate);
+//	    countQuery.select(cb.count(countRoot)).where(countPredicates.toArray(new Predicate[0]));
+//	    Long total = entityManager.createQuery(countQuery).getSingleResult();
+//
+//	    return new PageImpl<>(allResults, PageRequest.of(page, size), total);
+//	}
+//
+//	private List<Predicate> buildPredicates(
+//	        CriteriaBuilder cb,
+//	        Root<ServiceRequest> root,
+//	        String userId,
+//	        String assetId,
+//	        String location,
+//	        String serviceSubCategory,
+//	        String status,
+//	        String fromDate,
+//	        String toDate) {
+//
+//	    List<Predicate> predicates = new ArrayList<>();
+//
+//	    if (userId != null && !userId.isEmpty()) {
+//	        predicates.add(cb.equal(root.get("requestedBy"), userId));
+//	    }
+//
+//	    if (assetId != null && !assetId.isEmpty()) {
+//	        predicates.add(cb.equal(root.get("assetId"), assetId));
+//	    }
+//
+//	    if (location != null && !location.trim().isEmpty() && (userId == null || userId.isEmpty())) {
+//	        List<CustomerRegistration> matchingCustomers = repo.findByUserTown(location.trim());
+//	        if (!matchingCustomers.isEmpty()) {
+//	            List<String> userIds = matchingCustomers.stream()
+//	                    .map(CustomerRegistration::getUserid)
+//	                    .toList();
+//	            predicates.add(root.get("requestedBy").in(userIds));
+//	        } else {
+//	            predicates.add(cb.disjunction()); // no match, return empty
+//	        }
+//	    }
+//
+//	    if (serviceSubCategory != null && !serviceSubCategory.isEmpty()) {
+//	        predicates.add(cb.equal(root.get("serviceName"), serviceSubCategory));
+//	    }
+//
+//	    if (status != null && !status.isEmpty()) {
+//	        predicates.add(cb.equal(root.get("status"), status));
+//	    }
+//
+//	    DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+//	    DateTimeFormatter dbFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+//
+//	    if (fromDate != null) {
+//	        String formattedFrom = LocalDate.parse(fromDate, inputFormatter).format(dbFormatter);
+//	        predicates.add(cb.greaterThanOrEqualTo(root.get("serviceRequestDate"), formattedFrom));
+//	    }
+//
+//	    if (toDate != null) {
+//	        String formattedTo = LocalDate.parse(toDate, inputFormatter).format(dbFormatter);
+//	        predicates.add(cb.lessThanOrEqualTo(root.get("serviceRequestDate"), formattedTo));
+//	    }
+//
+//
+//
+//	    return predicates;
+//	}
+
+	@Override
+	public ServiceRequest updateRequest(ServiceRequest requestData) {
+		ServiceRequest serviceRequestData = requestRepo.findByRequestId(requestData.getRequestId());
+		if (serviceRequestData != null) {
+			serviceRequestData.setDescription(requestData.getDescription());
+			serviceRequestData.setLocation(requestData.getLocation());
+			serviceRequestData.setServiceSubCategory(requestData.getServiceSubCategory());
+			return requestRepo.save(serviceRequestData);
+		}
+		return null;
+	}
+
+	@Override
+	public ServiceRequest updateStatusRequest(ServiceRequest requestData) {
+		ServiceRequest serviceRequestData = requestRepo.findByRequestId(requestData.getRequestId());
+		if (serviceRequestData != null) {
+			ServiceStatusUpate update = statusRepo.findByServiceRequestId(requestData.getRequestId());
+			if (update != null) {
+				serviceRequestData.setStatus(requestData.getStatus());
+				ServiceRequest service = requestRepo.save(serviceRequestData);
+
+				update.setStatus(requestData.getStatus());
+				statusRepo.save(update);
+				return service;
+			}
+
+		}
+		return null;
+	}
+
+//	@Override
+//	public boolean sendEmail(String requestedBy, ServiceRequest service) {
+//		Optional<ServiceRequest> request = Optional.ofNullable(requestRepo.findByRequestId(service.getRequestId()));
+//		if (request.isPresent()) {
+//			String requestedByEmail = request.get().getRequestedBy();
+//			CustomerRegistration customer = Customerrepo.findByUserEmailCustomQuery(requestedByEmail);
+//			if (customer == null || customer.getUserEmail() == null) {
+//				return false;
+//			}
+//
+//			String email = customer.getUserEmail();
+//			SimpleMailMessage mail = new SimpleMailMessage();
+//			mail.setTo(email);
+//			mail.setSubject("Your request details.");
+//			String body = String.format(
+//					"ReqSeqId: %s\nAssetId: %s\nRequestId: %s\nServiceName: %s\nService sub category: %s\nRequestedBy: %s\nStatus: %s\nServiceDate: %s\nDescription: %s\nLocation: %s",
+//					service.getReqSeqId(), service.getAssetId(), service.getRequestId(), service.getServiceName(),
+//					service.getServiceSubCategory(), service.getRequestedBy(), service.getStatus(),
+//					service.getServiceDateDb(), service.getDescription(), service.getLocation());
+//			mail.setText(body);
+//			mailsender.send(mail);
+//			return true;
+//		}
+//		return false;
+//	}
+
+}
