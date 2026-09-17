@@ -14,6 +14,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CxQuotationResponseDto {
 
+    @JsonProperty("Id")
+    private Long id;
+
     @JsonProperty("request_id")
     private String requestId;
 
@@ -39,7 +42,7 @@ public class CxQuotationResponseDto {
     private String expectedDeliveryDate;
 
     @JsonProperty("delivery_location")
-    private String DeliveryLocation;
+    private String deliveryLocation;
 
     @JsonProperty("pincode")
     private String pincode;

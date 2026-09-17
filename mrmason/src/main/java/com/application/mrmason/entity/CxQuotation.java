@@ -1,25 +1,23 @@
 package com.application.mrmason.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Data
 @Builder
 @Entity
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name="cx_quotation")
 public class CxQuotation {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     @Column(name = "request_id")
     private String requestId;
 
@@ -45,7 +43,7 @@ public class CxQuotation {
     private String expectedDeliveryDate;
 
     @Column(name = "delivery_location")
-    private String DeliveryLocation;
+    private String deliveryLocation;
 
     @Column(name = "pincode")
     private String pincode;

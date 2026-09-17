@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface CxQuotationService {
 
-    public CxQuotationResponseDto createQuotation(CxQuotationRequestDto dto);
+    public List<CxQuotationResponseDto> createQuotation(List<CxQuotationRequestDto> dto);
 
     public CxQuotationResponseDto updateQuotation(CxQuotationRequestDto dto);
 

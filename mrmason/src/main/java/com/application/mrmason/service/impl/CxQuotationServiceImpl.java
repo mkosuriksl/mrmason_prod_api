@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,55 +30,60 @@ public class CxQuotationServiceImpl implements CxQuotationService {
     private final CxQuotationRepository cxQuotationRepository;
     private final CustomerRegistrationRepo customerRegistrationRepo;
     private final EmailServiceImpl emailService;
-    private final JwtService jwtService;
 
 
     @Override
-    public CxQuotationResponseDto createQuotation(CxQuotationRequestDto dto) {
+    public List<CxQuotationResponseDto> createQuotation(List<CxQuotationRequestDto> dtoList) {
 
+        if (dtoList == null || dtoList.isEmpty()) {
+            throw new IllegalArgumentException("Quotation details list cannot be null or empty");
+        }
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
         CustomerRegistration customer = customerRegistrationRepo.findByUserEmailOne(currentEmail)
-                .orElseThrow(()-> new RuntimeException("No customer found : " + currentEmail));
+                .orElseThrow(() -> new RuntimeException("No customer found : " + currentEmail));
 
-        if(dto == null){
-            throw new RuntimeException("Details can't be null");
-        }
 
         String loggedUser = customer.getUserid();
-
         String DateFormat = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-
         String uniqueId = "QT" + DateFormat;
 
-        CxQuotation quotation = CxQuotation.builder()
-                .requestId(uniqueId)
-                .productName(dto.getProductName())
-                .productCategory(dto.getProductCategory())
-                .productSubCategory(dto.getProductSubCategory())
-                .brand(dto.getBrand())
-                .stockKeepingUnit(dto.getStockKeepingUnit())
-                .quantity(dto.getQuantity())
-                .expectedDeliveryDate(dto.getExpectedDeliveryDate())
-                .DeliveryLocation(dto.getDeliveryLocation())
-                .pincode(dto.getPincode())
-                .updatedBy(loggedUser)
-                .updatedDate(LocalDateTime.now())
-                .build();
+        List<CxQuotation> quotationsToSave = dtoList.stream()
+                .map(itemDto -> CxQuotation.builder()
+                        .id(itemDto.getId())
+                        .requestId(uniqueId)
+                        .productName(itemDto.getProductName())
+                        .productCategory(itemDto.getProductCategory())
+                        .productSubCategory(itemDto.getProductSubCategory())
+                        .brand(itemDto.getBrand())
+                        .stockKeepingUnit(itemDto.getStockKeepingUnit())
+                        .quantity(itemDto.getQuantity())
+                        .expectedDeliveryDate(itemDto.getExpectedDeliveryDate())
+                        .deliveryLocation(itemDto.getDeliveryLocation())
+                        .pincode(itemDto.getPincode())
+                        .updatedBy(loggedUser)
+                        .updatedDate(LocalDateTime.now())
+                        .build())
+                .collect(Collectors.toList());
 
-        CxQuotation savedQuotation = cxQuotationRepository.save(quotation);
+        List<CxQuotation> savedQuotations = cxQuotationRepository.saveAll(quotationsToSave);
 
-        String subject = "Confirmed Quotation - " + savedQuotation.getProductName();
+        CxQuotation firstQuotation = savedQuotations.get(0);
+
+        String subject = "Confirmed Quotation - " + uniqueId;
         String body = String.format(
                 "Dear %s,<br><br>" +
                         "Your quotation for '%s' (Quantity: %s) has been successfully created." +
                         "<br><br>Thank You!",
                 customer.getCustomerName(),
-                savedQuotation.getProductName(),
-                savedQuotation.getQuantity());
+                firstQuotation.getProductName(),
+                savedQuotations.size());
+
         emailService.sendEmail(customer.getUserEmail(), subject, body);
 
-        return mapToDto(savedQuotation);
+        return savedQuotations.stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
     }
 
     /*--------------------------------------Get my quotation (logged in user)----------------------------------------*/
@@ -88,7 +94,7 @@ public class CxQuotationServiceImpl implements CxQuotationService {
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
         CustomerRegistration customer = customerRegistrationRepo.findByUserEmailOne(currentEmail)
-                .orElseThrow(()-> new RuntimeException("No customer found : " + currentEmail));
+                .orElseThrow(() -> new RuntimeException("No customer found : " + currentEmail));
 
         String customerId = customer.getUserid();
 
@@ -111,14 +117,14 @@ public class CxQuotationServiceImpl implements CxQuotationService {
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
         CustomerRegistration customer = customerRegistrationRepo.findByUserEmailOne(currentEmail)
-                .orElseThrow(()-> new RuntimeException("No customer found : " + currentEmail));
+                .orElseThrow(() -> new RuntimeException("No customer found : " + currentEmail));
 
         String customerId = customer.getUserid();
 
         CxQuotation quotation = cxQuotationRepository.findById(dto.getRequestId())
                 .orElseThrow(() -> new RuntimeException("No request id found : " + dto.getRequestId()));
 
-        if(!customerId.equals(quotation.getUpdatedBy())){
+        if (!customerId.equals(quotation.getUpdatedBy())) {
             throw new RuntimeException("Unauthorized: You do not have permission to update this quotation");
         }
 
@@ -135,16 +141,16 @@ public class CxQuotationServiceImpl implements CxQuotationService {
     }
 
     @Override
-    public List<CxQuotationResponseDto> getAllQuotation(String productCategory ,
-                                                  String productSubCategory ,
-                                                  String brand,
-                                                  String stockKeepingUnit,
-                                                  String productName,
-                                                  String quantity,
-                                                  String pincode,
-                                                  String updatedBy,
-                                                  String expectedDeliveryDate,
-                                                  String updatedDate) {
+    public List<CxQuotationResponseDto> getAllQuotation(String productCategory,
+                                                        String productSubCategory,
+                                                        String brand,
+                                                        String stockKeepingUnit,
+                                                        String productName,
+                                                        String quantity,
+                                                        String pincode,
+                                                        String updatedBy,
+                                                        String expectedDeliveryDate,
+                                                        String updatedDate) {
 
         LocalDateTime parsedUpdatedDate = null;
         if (updatedDate != null && !updatedDate.trim().isEmpty()) {
@@ -153,8 +159,8 @@ public class CxQuotationServiceImpl implements CxQuotationService {
             parsedUpdatedDate = LocalDate.parse(updatedDate, formatter).atStartOfDay();
         }
 
-        List<CxQuotation> quotationAllList = cxQuotationRepository.findByFilters(productCategory ,
-                productSubCategory ,
+        List<CxQuotation> quotationAllList = cxQuotationRepository.findByFilters(productCategory,
+                productSubCategory,
                 brand,
                 stockKeepingUnit,
                 productName,
@@ -174,17 +180,21 @@ public class CxQuotationServiceImpl implements CxQuotationService {
     }
 
 
-    CxQuotationResponseDto mapToDto (CxQuotation cxQuotation) {
+    CxQuotationResponseDto mapToDto(CxQuotation cxQuotation) {
+        if (cxQuotation == null) {
+            return null;
+        }
         return CxQuotationResponseDto.builder()
-                .productName(cxQuotation.getProductName())
+                .id(cxQuotation.getId())
                 .requestId(cxQuotation.getRequestId())
+                .productName(cxQuotation.getProductName())
                 .productCategory(cxQuotation.getProductCategory())
                 .productSubCategory(cxQuotation.getProductSubCategory())
                 .brand(cxQuotation.getBrand())
                 .stockKeepingUnit(cxQuotation.getStockKeepingUnit())
                 .quantity(cxQuotation.getQuantity())
                 .expectedDeliveryDate(cxQuotation.getExpectedDeliveryDate())
-                .DeliveryLocation(cxQuotation.getDeliveryLocation())
+                .deliveryLocation(cxQuotation.getDeliveryLocation())
                 .pincode(cxQuotation.getPincode())
                 .updatedBy(cxQuotation.getUpdatedBy())
                 .updatedDate(cxQuotation.getUpdatedDate())

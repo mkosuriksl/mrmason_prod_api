@@ -26,13 +26,13 @@ public class CxQuotationController {
     private final CxQuotationServiceImpl cxQuotationService;
 
     @PostMapping("/create")
-    public ResponseEntity<GenericResponse<CxQuotationResponseDto>>
-                    createQuotation (@RequestBody CxQuotationRequestDto dto){
+    public ResponseEntity<GenericResponse<List<CxQuotationResponseDto>>>
+                    createQuotation (@RequestBody List<CxQuotationRequestDto> dto){
 
         try {
-            CxQuotationResponseDto responseData = cxQuotationService.createQuotation(dto);
+            List<CxQuotationResponseDto> responseData = cxQuotationService.createQuotation(dto);
 
-            GenericResponse<CxQuotationResponseDto> response = GenericResponse.<CxQuotationResponseDto>builder()
+            GenericResponse<List<CxQuotationResponseDto>> response = GenericResponse.<List<CxQuotationResponseDto>>builder()
                     .message("Quotation created successfully")
                     .success(true)
                     .data(responseData)
@@ -41,7 +41,7 @@ public class CxQuotationController {
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
         } catch (Exception ex) {
-            GenericResponse<CxQuotationResponseDto> errorResponse = GenericResponse.<CxQuotationResponseDto>builder()
+            GenericResponse<List<CxQuotationResponseDto>> errorResponse = GenericResponse.<List<CxQuotationResponseDto>>builder()
                     .message("Failed to create quotation: " + ex.getMessage())
                     .success(false)
                     .data(null)
