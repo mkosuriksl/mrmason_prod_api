@@ -120,60 +120,142 @@ public class UserService {
 		return userDAO.existsByMobile(mobile);
 	}
 
-	@Transactional
-	public Userdto addDetails(User user) {
-		String encryptPassword = byCrypt.encode(user.getPassword());
-		user.setPassword(encryptPassword);
+	// @Transactional
+	// public Userdto addDetails(User user) {
+	// 	String encryptPassword = byCrypt.encode(user.getPassword());
+	// 	user.setPassword(encryptPassword);
 
-		// Email sending
-		String subject = "Verify Your Email and Mobile Number";
-		String emailMessage = "Thanks for registering with us. please verify your registered email and mobile.";
-		emailService.sendEmail(user.getEmail(), subject, emailMessage);
-		// Mobile sms sending
-		String message = "Thanks for registering with us. please verify your registered email and mobile before login. - mekanik.in";
-		smsService.registrationSendSMSMessage(user.getMobile(), message, user.getRegSource());
-		User data = userDAO.save(user);
+	// 	// Email sending
+	// 	String subject = "Verify Your Email and Mobile Number";
+	// 	String emailMessage = "Thanks for registering with us. please verify your registered email and mobile.";
+	// 	emailService.sendEmail(user.getEmail(), subject, emailMessage);
+	// 	// Mobile sms sending
+	// 	String message = "Thanks for registering with us. please verify your registered email and mobile before login. - mekanik.in";
+	// 	smsService.registrationSendSMSMessage(user.getMobile(), message, user.getRegSource());
+	// 	User data = userDAO.save(user);
 
-		ServicePersonLogin service = new ServicePersonLogin();
-		service.setEmail(user.getEmail());
-		service.setMobile(user.getMobile());
-		service.setMobVerify("no");
-		service.setEVerify("no");
-		service.setRegSource(user.getRegSource());
-		serviceLoginRepo.save(service);
+	// 	ServicePersonLogin service = new ServicePersonLogin();
+	// 	service.setEmail(user.getEmail());
+	// 	service.setMobile(user.getMobile());
+	// 	service.setMobVerify("no");
+	// 	service.setEVerify("no");
+	// 	service.setRegSource(user.getRegSource());
+	// 	serviceLoginRepo.save(service);
 		
-		AdminSpVerification verification = new AdminSpVerification();
-	    verification.setBodSeqNo(data.getBodSeqNo());
-	    verification.setStatus("new");
-	    verification.setComment("");
-	    verification.setUpdateBy(data.getBodSeqNo()); // or pass admin if available
-	    verification.setUpdatedDate(new Date());
-	    adminSpVerificationRepository.save(verification);
+	// 	AdminSpVerification verification = new AdminSpVerification();
+	//     verification.setBodSeqNo(data.getBodSeqNo());
+	//     verification.setStatus("new");
+	//     verification.setComment("");
+	//     verification.setUpdateBy(data.getBodSeqNo()); // or pass admin if available
+	//     verification.setUpdatedDate(new Date());
+	//     adminSpVerificationRepository.save(verification);
 
-		Userdto dto = new Userdto();
-		dto.setName(user.getName());
-		dto.setMobile(user.getMobile());
-		dto.setEmail(user.getEmail());
-		dto.setAddress(user.getAddress());
-		dto.setCity(user.getCity());
-		dto.setDistrict(user.getDistrict());
-		dto.setState(user.getState());
-		dto.setLocation(user.getLocation());
-		dto.setVerified(user.getVerified());
-		dto.setUserType(String.valueOf(data.getUserType()));
-		dto.setStatus(user.getStatus());
-		dto.setBusinessName(user.getBusinessName());
-		dto.setBodSeqNo(user.getBodSeqNo());
-		dto.setRegisteredDate(user.getRegisteredDate());
-		dto.setUpdatedDate(user.getUpdatedDate());
-		dto.setServiceCategory(user.getServiceCategory());
-		dto.setRegSource(user.getRegSource().toString());
-		dto.setLinkedInURL(user.getLinkedInURL());
-		dto.setHighestQualification(user.getHighestQualification());
+	// 	Userdto dto = new Userdto();
+	// 	dto.setName(user.getName());
+	// 	dto.setMobile(user.getMobile());
+	// 	dto.setEmail(user.getEmail());
+	// 	dto.setAddress(user.getAddress());
+	// 	dto.setCity(user.getCity());
+	// 	dto.setDistrict(user.getDistrict());
+	// 	dto.setState(user.getState());
+	// 	dto.setLocation(user.getLocation());
+	// 	dto.setVerified(user.getVerified());
+	// 	dto.setUserType(String.valueOf(data.getUserType()));
+	// 	dto.setStatus(user.getStatus());
+	// 	dto.setBusinessName(user.getBusinessName());
+	// 	dto.setBodSeqNo(user.getBodSeqNo());
+	// 	dto.setRegisteredDate(user.getRegisteredDate());
+	// 	dto.setUpdatedDate(user.getUpdatedDate());
+	// 	dto.setServiceCategory(user.getServiceCategory());
+	// 	dto.setRegSource(user.getRegSource().toString());
+	// 	dto.setLinkedInURL(user.getLinkedInURL());
+	// 	dto.setHighestQualification(user.getHighestQualification());
 
-		return dto;
+	// 	return dto;
 
-	}
+	// }
+        @Transactional
+public Userdto addDetails(User user) {
+
+    // 1. Encrypt password
+    String encryptPassword = byCrypt.encode(user.getPassword());
+    user.setPassword(encryptPassword);
+
+    // 2. Save User first
+    User data = userDAO.save(user);
+
+    // 3. Create ServicePersonLogin record
+    ServicePersonLogin service = new ServicePersonLogin();
+
+    service.setEmail(data.getEmail());
+    service.setMobile(data.getMobile());
+    service.setMobVerify("no");
+    service.setEVerify("no");
+    service.setRegSource(data.getRegSource());
+
+    serviceLoginRepo.save(service);
+
+    // 4. Generate EMAIL OTP
+    // ServicePersonLogin must already exist before this call
+    otpService.generateOtp(
+            data.getEmail(),
+            data.getRegSource()
+    );
+
+    // 5. Send mobile verification SMS
+    String message =
+            "Thanks for registering with us. Please verify your registered email and mobile before login. - mekanik.in";
+
+    smsService.registrationSendSMSMessage(
+            data.getMobile(),
+            message,
+            data.getRegSource()
+    );
+
+    // 6. Create Admin SP verification record
+    AdminSpVerification verification = new AdminSpVerification();
+
+    verification.setBodSeqNo(data.getBodSeqNo());
+    verification.setStatus("new");
+    verification.setComment("");
+    verification.setUpdateBy(data.getBodSeqNo());
+    verification.setUpdatedDate(new Date());
+
+    adminSpVerificationRepository.save(verification);
+
+    // 7. Prepare response
+    Userdto dto = new Userdto();
+
+    dto.setName(data.getName());
+    dto.setMobile(data.getMobile());
+    dto.setEmail(data.getEmail());
+    dto.setAddress(data.getAddress());
+    dto.setCity(data.getCity());
+    dto.setDistrict(data.getDistrict());
+    dto.setState(data.getState());
+    dto.setLocation(data.getLocation());
+    dto.setVerified(data.getVerified());
+    dto.setUserType(
+            data.getUserType() != null
+                    ? data.getUserType().toString()
+                    : null
+    );
+    dto.setStatus(data.getStatus());
+    dto.setBusinessName(data.getBusinessName());
+    dto.setBodSeqNo(data.getBodSeqNo());
+    dto.setRegisteredDate(data.getRegisteredDate());
+    dto.setUpdatedDate(data.getUpdatedDate());
+    dto.setServiceCategory(data.getServiceCategory());
+    dto.setRegSource(
+            data.getRegSource() != null
+                    ? data.getRegSource().toString()
+                    : null
+    );
+    dto.setLinkedInURL(data.getLinkedInURL());
+    dto.setHighestQualification(data.getHighestQualification());
+
+    return dto;
+}
 
 	public User updateDataWithEmail(String email) {
 		Optional<User> existedByEmail = Optional.of(userDAO.findByEmail(email));

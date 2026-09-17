@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/Servers/Servers.iml" filepath="$PROJECT_DIR$/Servers/Servers.iml" />
-      <module fileurl="file://$PROJECT_DIR$/mrmason-api.iml" filepath="$PROJECT_DIR$/mrmason-api.iml" />
     </modules>
   </component>
 </project>
