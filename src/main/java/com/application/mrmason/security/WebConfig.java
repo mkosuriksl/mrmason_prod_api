@@ -41,6 +41,7 @@ public class WebConfig {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http.cors(AbstractHttpConfigurer::disable).csrf(AbstractHttpConfigurer::disable)
+
 				.exceptionHandling((exception) -> exception.authenticationEntryPoint(new JwtAuthEntryPoint()))
 				.sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth.requestMatchers("/login", "/error", "/addAdminDetails",
@@ -63,6 +64,7 @@ public class WebConfig {
 						"/getBhatServiceCategory","/getBhatServiceCategory/nonCivil/{serviceCategory}","/getBhatServiceCategory/civil/{serviceCategory}",
 						"/swagger-resources", "/swagger-resources/**", "/configuration/ui", "/configuration/security","/api/distinct-location-by-ms","/distinct-location-by-sp",
 						"/swagger-ui/**", "/webjars/**", "/swagger-ui.html", "/getRentalAssetsNoAuth","/getAdminUiEndPoint","/api/home-search-by-location","/api/home-search-by-machine").permitAll()
+						.requestMatchers("/api/quotation/get_all_quotation_info").hasAnyRole("MS", "Adm")
 						.anyRequest().authenticated());
 
 		http.authenticationProvider(customDaoAuthenticationProvider());

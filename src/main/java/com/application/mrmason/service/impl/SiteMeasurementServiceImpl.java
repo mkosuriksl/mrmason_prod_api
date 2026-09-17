@@ -1,15 +1,16 @@
 package com.application.mrmason.service.impl;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -125,16 +126,42 @@ public class SiteMeasurementServiceImpl implements SiteMeasurementService {
 		CustomerRegistration customer = repo.findByUserids(saved.getCustomerId())
 				.orElseThrow(() -> new ResourceNotFoundException("Customer not found for ID: " + saved.getCustomerId()));
 
-		String subject = "Site Measurement Added Successfully";
-		String body = "Dear " + customer.getCustomerName() + ",<br><br>" +
-				"Your site measurement has been successfully recorded. See attached PDF.<br><br>Regards,<br>Mr Mason Team";
-
+		String LocalDateTime = "";
+		String body = "<div style='font-family: Arial, sans-serif; color: #333; max-width: 600px;'>"
+				+ "<p>Dear <b>" + customer.getCustomerName() + "</b>,</p>"
+				+ "<p>Your site measurement request has been successfully recorded. Below are the details:</p>"
+				+ "<table border='1' cellpadding='8' cellspacing='0' style='border-collapse: collapse; width: 100%; border: 1px solid #ddd;'>"
+				+ "  <tr style='background-color: #f2f2f2;'><th style='text-align: left;'>Field</th><th style='text-align: left;'>Details</th></tr>"
+				+ "  <tr><td><b>Customer Name</b></td><td>" + customer.getCustomerName() + "</td></tr>"
+				+ "  <tr><td><b>Service Request Id</b></td><td>" + (saved.getServiceRequestId() != null ? saved.getServiceRequestId() : "N/A") + "</td></tr>"
+				+ "  <tr><td><b>Location</b></td><td>" + (saved.getLocation() != null ? saved.getLocation() : "N/A") + "</td></tr>"
+				+ "  <tr><td><b>Status</b></td><td>" + saved.getStatus() + "</td></tr>"
+				+ "  <tr><td><b>Expected Start Date</b></td><td>" + saved.getExpectedStartDate() + "</td></tr>"
+				+ "  <tr><td><b>West Site Length</b></td><td>" + measurement.getWestSiteLength() + "</td></tr>"
+				+ "  <tr><td><b>South Site Length</b></td><td>" + measurement.getSouthSiteLength() + "</td></tr>"
+				+ "  <tr><td><b>North Site Length</b></td><td>" + measurement.getNorthSiteLength() + "</td></tr>"
+				+ "  <tr><td><b>East Site Length</b></td><td>" + measurement.getEastSiteLength() + "</td></tr>"
+				+ "  <tr><td><b>Expected Bed Rooms</b></td><td>" + (saved.getExpectedBedRooms() != null ? saved.getExpectedBedRooms() : "N/A") + "</td></tr>"
+				+ "  <tr><td><b>Expected Attached Bathrooms</b></td><td>" + (saved.getExpectedAttachedBathRooms() != null ? saved.getExpectedAttachedBathRooms() : "N/A") + "</td></tr>"
+				+ "  <tr><td><b>Expected Additional Bathrooms</b></td><td>" + (saved.getExpectedAdditionalBathRooms() != null ? saved.getExpectedAdditionalBathRooms() : "N/A") + "</td></tr>"
+				+ "  <tr><td><b>Request Date</b></td><td>" + saved.getRequestDate() + "</td></tr>"
+				+ "  <tr><td><b>Updated By</b></td><td>" + saved.getUpdatedBy() + "</td></tr>"
+				+ "</table>"
+				+ "<p style='margin-top: 15px;'>Please find the attached PDF document for complete details and specifications.</p>"
+				+ "<p>Regards,<br><b>Mr Mason Team</b></p>"
+				+ "</div>";
 		// Generate PDF
 		byte[] pdf = generateSiteMeasurementPdf(saved, customer);
 
+		/*String subject = "Site Measurement Added Successfully";
+		String body = "Dear " + customer.getCustomerName() + ",<br><br>" +
+				"Your site measurement has been successfully recorded. See attached PDF.<br><br>Regards,<br>Mr Mason Team";*/
 
-		emailService.sendEmailWithAttachment(customer.getUserEmail(), subject, body, pdf, "SiteMeasurement.pdf");
-					// Send email
+		emailService.sendEmailWithAttachment(customer.getUserEmail(),
+				"Site Measurement Added Successfully",
+				body,
+				pdf,
+				"SiteMeasurement.pdf");
 
 	    return saved;
 	}
@@ -576,4 +603,31 @@ public class SiteMeasurementServiceImpl implements SiteMeasurementService {
 
 		return response;
 	}
+
+	private String buildPlainTextEmailBody(CustomerRegistration customer, SiteMeasurement saved) {
+		SimpleDateFormat formatter = new SimpleDateFormat("dd-MMM-yyyy HH:mm");
+		String formattedDate = saved.getRequestDate() != null ? formatter.format(saved.getRequestDate()) : "N/A";
+
+		Map<String, String> detailsMap = new LinkedHashMap<>();
+		detailsMap.put("Customer Name", customer.getCustomerName() != null ? customer.getCustomerName() : "");
+		detailsMap.put("Service Category", saved.getServiceRequestId() != null ? saved.getServiceRequestId() : "N/A");
+		detailsMap.put("Location", saved.getLocation() != null ? saved.getLocation() : "N/A");
+		detailsMap.put("Status", saved.getStatus() != null ? saved.getStatus() : "NEW");
+		detailsMap.put("Request Date", formattedDate);
+		detailsMap.put("Updated By", saved.getUpdatedBy() != null ? saved.getUpdatedBy() : "N/A");
+
+		StringBuilder body = new StringBuilder();
+		body.append("Dear ").append(detailsMap.get("Customer Name")).append(",\n\n");
+		body.append("Your site measurement request has been successfully recorded. Below are the details:\n\n");
+
+		for (Map.Entry<String, String> entry : detailsMap.entrySet()) {
+			body.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+		}
+
+		body.append("\nPlease find the attached PDF document for complete details and specifications.\n\n");
+		body.append("Regards,\nMr Mason Team");
+
+		return body.toString();
+	}
+
 }
