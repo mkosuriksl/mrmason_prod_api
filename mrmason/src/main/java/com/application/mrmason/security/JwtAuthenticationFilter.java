@@ -2,6 +2,7 @@ package com.application.mrmason.security;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
@@ -101,10 +102,43 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 						CustomerRegistration customer = customerRegistrationRepo.findByUserMobileOrUserEmailAndUserid(username,userId).get();
 						userDetails=customer;
 					}
-					if (userType.equals("MS")) {
-						MaterialSupplierQuotationUser material = materialSupplierQuotationUserDAO.findByMobileOrEmailAndBodSeqNo(username,userId).get();
-						userDetails=material;
-					}
+					if ("MS".equals(userType)) {
+
+    Optional<MaterialSupplierQuotationUser> materialOptional =
+            materialSupplierQuotationUserDAO
+                    .findByMobileOrEmailAndBodSeqNo(username, userId);
+
+    System.out.println("========== MS JWT DEBUG ==========");
+    System.out.println("Username : " + username);
+    System.out.println("User ID  : " + userId);
+    System.out.println("User Type: " + userType);
+    System.out.println("RegSource: " + regSource);
+
+    if (materialOptional.isEmpty()) {
+
+        System.out.println("MS USER NOT FOUND");
+
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+
+        response.getWriter().write(
+                "{\"message\":\"MS user not found for JWT credentials\",\"status\":false}"
+        );
+
+        return;
+    }
+
+    MaterialSupplierQuotationUser material = materialOptional.get();
+
+    System.out.println("MS USER FOUND");
+    System.out.println("BOD_SEQ_NO : " + material.getBodSeqNo());
+    System.out.println("Email      : " + material.getEmail());
+    System.out.println("Mobile     : " + material.getMobile());
+    System.out.println("User Type  : " + material.getUserType());
+    System.out.println("Authorities: " + material.getAuthorities());
+
+    userDetails = material;
+}
 					if (userType.equals("FR")) {
 						userDetails = frRegRepository.findByFrEmails(username);
 					}
