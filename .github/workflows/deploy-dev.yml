@@ -79,3 +79,50 @@ jobs:
             echo "======================================"
             echo "MrMason DEV deployment successful"
             echo "======================================"
+
+
+
+
+            set -e
+
+            echo "Stopping MrMason DEV service..."
+            sudo systemctl stop mrmason-dev
+
+            echo "Checking copied JAR..."
+            ls -lh /opt/mrmason-dev/mrmason-0.0.1-SNAPSHOT.jar
+
+            echo "Replacing application JAR..."
+            mv /opt/mrmason-dev/mrmason-0.0.1-SNAPSHOT.jar \
+            /opt/mrmason-dev/mrmason.jar
+
+            echo "Starting MrMason DEV service..."
+            sudo systemctl start mrmason-dev
+
+            echo "Waiting for application startup..."
+
+            PORT_READY=false
+
+            for i in {1..12}; do
+                if sudo ss -lntp | grep -q ':8080'; then
+                    echo "Port 8080 is listening."
+                    PORT_READY=true
+                    break
+                fi
+
+               echo "Waiting for port 8080... attempt $i/12"
+               sleep 5
+            done
+
+            if [ "$PORT_READY" != "true" ]; then
+              echo "ERROR: MrMason DEV did not start on port 8080"
+              sudo systemctl status mrmason-dev --no-pager -l
+              sudo journalctl -u mrmason-dev -n 100 --no-pager
+              exit 1
+            fi
+
+            echo "Checking service..."
+            sudo systemctl is-active --quiet mrmason-dev
+
+            echo "======================================"
+            echo "MrMason DEV deployment successful"
+            echo "======================================"
