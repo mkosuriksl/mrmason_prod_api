@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Repository;
 
 import com.application.mrmason.entity.CustomerRegistration;
@@ -23,22 +24,15 @@ public interface UserDAO extends JpaRepository<User, String> {
 	boolean existsByMobile(String mobile);
 
 	User findByEmail(String email);
-
-	@Query("SELECT u FROM User u WHERE u.email = :email AND u.regSource = :regSource ORDER BY u.registrationDatetime DESC")
-	Optional<User> findByEmailAndRegSource(@Param("email") String email, @Param("regSource") RegSource regSource);
-
-	Optional<User> findFirstByMobileAndRegSource(String mobile, RegSource regSource);
 	
 	@Query("SELECT s FROM User s WHERE s.email = :email")
 	Optional<User> findByEmailOne(@Param("email") String email);
-
-	Optional<User> findFirstByEmailAndRegSource(String email, RegSource regSource);
 	
 	@Query("SELECT s FROM User s WHERE s.email = :email AND s.userType = :userType AND s.regSource = :regSource")
 	Optional<User> findByEmailAndUserTypeAndRegSource(@Param("email") String email,@Param("userType") UserType userType,RegSource regSource);
 
-/*	@Query("SELECT u FROM User u WHERE u.email = :email AND u.regSource = :regSource")
-	Optional<User> findByEmailAndRegSource(String email, RegSource regSource);*/
+	@Query("SELECT u FROM User u WHERE u.email = :email AND u.regSource = :regSource")
+	Optional<User> findByEmailAndRegSource(String email, RegSource regSource);
 
 	@Query("SELECT u FROM User u WHERE u.mobile = :mobile  AND u.regSource = :regSource")
 	Optional<User> findByMobileAndRegSource(String mobile, RegSource regSource);
