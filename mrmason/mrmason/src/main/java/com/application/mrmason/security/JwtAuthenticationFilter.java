@@ -60,6 +60,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
 			@NonNull FilterChain filterChain) throws ServletException, IOException {
+
+		System.out.println(">>> SECURITY FILTER HIT: URI = " + request.getRequestURI());
+		System.out.println(">>> Auth Header = " + request.getHeader("Authorization"));
+
 		final String authHeader = request.getHeader("Authorization");
 
 		String origin = request.getHeader(ORIGIN);

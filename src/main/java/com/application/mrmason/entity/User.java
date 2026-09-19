@@ -93,6 +93,7 @@ public class User implements UserDetails {
 	private String status = "inactive";
 
 	@Enumerated(EnumType.STRING)
+	@Column(name = "reg_source")
 	private RegSource regSource;
 	
 	@Column(name = "linkedin_url")

@@ -3,11 +3,8 @@ package com.application.mrmason.entity;
 import java.time.LocalDateTime;
 import java.util.Date;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
+import com.application.mrmason.enums.RegSource;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -38,5 +35,8 @@ public class QuotationEntity {
 	private Date updatedDate;
 	@Column(name = "status")
 	private String status;
+	@Column(name="regSource")
+	@Enumerated(EnumType.STRING)
+	private RegSource regSource;
 
 }

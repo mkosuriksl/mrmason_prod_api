@@ -19,6 +19,18 @@ public interface ServicePersonLoginDAO extends JpaRepository<ServicePersonLogin,
 	@Query("SELECT u FROM ServicePersonLogin u WHERE LOWER(u.email) = LOWER(:email)")
 	List<ServicePersonLogin> findByEmailOne(@Param("email") String email);
 
+	@Query("SELECT s FROM ServicePersonLogin s WHERE s.userEmail = :email AND s.regSource = :regSource ORDER BY s.otpSeqNo DESC")
+	List<ServicePersonLogin> findByUserEmailAndRegSource(@Param("email") String email, @Param("regSource") RegSource regSource);
+
+	@Query("SELECT s FROM ServicePersonLogin s WHERE s.userMobile = :mobile AND s.regSource = :regSource ORDER BY s.otpSeqNo DESC")
+	List<ServicePersonLogin> findByUserMobileAndRegSource(@Param("mobile") String mobile, @Param("regSource") RegSource regSource);
+
+	@Query("SELECT s FROM ServicePersonLogin s WHERE s.email = :email AND s.regSource = :regSource")
+	Optional<ServicePersonLogin> findByEmailAndRegSource(@Param("email") String email, @Param("regSource") String regSource);
+
+	@Query("SELECT s FROM ServicePersonLogin s WHERE s.mobile = :mobile AND s.regSource = :regSource")
+	Optional<ServicePersonLogin> findByMobileAndRegSource(@Param("mobile") String mobile, @Param("regSource") String regSource);
+
 	Optional<ServicePersonLogin> findByEmailAndRegSource(String email, RegSource regSource);
 
 	@Query("SELECT s FROM ServicePersonLogin s WHERE (s.email = :email OR s.mobile = :mobile) AND s.regSource = :regSource")

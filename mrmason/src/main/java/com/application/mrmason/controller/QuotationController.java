@@ -1,6 +1,7 @@
 package com.application.mrmason.controller;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -34,24 +35,15 @@ public class QuotationController {
 	@Autowired
 	UserService userService;
 
-	@ExceptionHandler(AccessDeniedException.class)
-	public ResponseEntity<ResponseQuotationtDTO> handleAccessDeniedException(AccessDeniedException ex) {
-		ResponseQuotationtDTO response = new ResponseQuotationtDTO();
-		response.setMessage("Access Denied");
-		response.setStatus(false);
-		log.warn("Access denied: {}", ex.getMessage());
-		return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
-	}
-
 	@PostMapping("/add-quotation")
-	public ResponseEntity<ResponseQuotationtDTO> createQuotation(@RequestBody QuotationEntity entity,@RequestParam RegSource regSource) {
+	public ResponseEntity<ResponseQuotationtDTO> createQuotation(@RequestBody List<QuotationEntity> entity) {
 		ResponseQuotationtDTO response = new ResponseQuotationtDTO();
 		try {
-			QuotationEntity savedquotationRequest = quotationService.createQuotation(entity,regSource);
-			if (savedquotationRequest != null) {
+			List<QuotationEntity> savedquotationRequest = quotationService.createQuotation(entity);
+			if (savedquotationRequest != null && !savedquotationRequest.isEmpty()) {
 				response.setMessage("QuotationRequest added successfully");
 				response.setStatus(true);
-				response.setData(mapToDTO(savedquotationRequest));
+				response.setData(mapToDTOList(savedquotationRequest));
 				return ResponseEntity.ok(response);
 			}
 			response.setMessage("Failed to add site quotationRequest");
@@ -63,6 +55,11 @@ public class QuotationController {
 			response.setStatus(false);
 			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
+	}
+	private List<QuotationDTO> mapToDTOList(List<QuotationEntity> entities) {
+		return entities.stream()
+				.map(this::mapToDTO)
+				.collect(Collectors.toList());
 	}
 
 	private QuotationDTO mapToDTO(QuotationEntity quotationRequest) {

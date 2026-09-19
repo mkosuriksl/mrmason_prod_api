@@ -43,27 +43,28 @@ public class QuotationController {
 		return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
 	}
 
-	@PostMapping("/add-quotation")
-	public ResponseEntity<ResponseQuotationtDTO> createQuotation(@RequestBody QuotationEntity entity,@RequestParam RegSource regSource) {
-		ResponseQuotationtDTO response = new ResponseQuotationtDTO();
-		try {
-			QuotationEntity savedquotationRequest = quotationService.createQuotation(entity,regSource);
-			if (savedquotationRequest != null) {
-				response.setMessage("QuotationRequest added successfully");
-				response.setStatus(true);
-				response.setData(mapToDTO(savedquotationRequest));
-				return ResponseEntity.ok(response);
-			}
-			response.setMessage("Failed to add site quotationRequest");
-			response.setStatus(false);
-			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-		} catch (Exception e) {
-			log.error("Error adding site quotationRequest: {}", e.getMessage());
-			response.setMessage(e.getMessage());
-			response.setStatus(false);
-			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-		}
+	if (savedQuotation != null) {
+		response.setMessage("QuotationRequest added successfully");
+		response.setStatus(true);
+		response.setData(mapToDTO(savedQuotation));
+		return ResponseEntity.ok(response);
+	} else {
+		response.setMessage("Failed to add site quotationRequest");
+		response.setStatus(false);
+		return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 	}
+} catch (ResourceNotFoundException | IllegalArgumentException e) {
+		log.error("Validation error adding quotation: {}", e.getMessage());
+		response.setMessage(e.getMessage());
+		response.setStatus(false);
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+		} catch (Exception e) {
+		log.error("Internal server error adding quotation: ", e);
+        response.setMessage("An error occurred: " + e.getMessage());
+		response.setStatus(false);
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+}
 
 	private QuotationDTO mapToDTO(QuotationEntity quotationRequest) {
 		QuotationDTO dto = new QuotationDTO();
@@ -75,6 +76,7 @@ public class QuotationController {
 		dto.setUnit(quotationRequest.getUnit());
 		dto.setUpdatedDate(quotationRequest.getUpdatedDate());
 		dto.setUpdatedBy(quotationRequest.getUpdatedBy());
+		dto.setRegSource(quotationRequest.getRegSource());
 		return dto;
 	}
 	

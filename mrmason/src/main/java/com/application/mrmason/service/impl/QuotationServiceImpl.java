@@ -46,27 +46,56 @@ public class QuotationServiceImpl implements QuotationService {
     private SiteMeasurementRepository siteRepository;
 
 	@Override
-	public QuotationEntity createQuotation(QuotationEntity quotationEntity,RegSource regSource) {
+	public List<QuotationEntity> createQuotation(List<QuotationEntity> quotationEntity) {
+
+		if (quotationEntity == null || quotationEntity.isEmpty()) {
+			return List.of();
+		}
+
 		String loggedInUserEmail = AuthDetailsProvider.getLoggedEmail();
 		Collection<? extends GrantedAuthority> loggedInRole = AuthDetailsProvider.getLoggedRole();
-		System.out.println("ROLE"+loggedInUserEmail);
-		List<String> roleNames = loggedInRole.stream()
-		        .map(GrantedAuthority::getAuthority)
-		        .map(role -> role.replace("ROLE_", "")) // Remove "ROLE_" prefix
-		        .collect(Collectors.toList());
+		System.out.println("ROLE" + loggedInUserEmail);
 
-		if (roleNames.equals("Developer")||roleNames.equals("Adm")) {
-		    throw new ResourceNotFoundException("Role Developer not found in: " + roleNames);
+		List<String> roleNames = (loggedInRole != null) ? loggedInRole.stream()
+				.map(GrantedAuthority::getAuthority)
+				.map(role -> role.replace("ROLE_", "")) // Remove "ROLE_" prefix
+				.collect(Collectors.toList())
+				: List.of();
+
+		if (roleNames.isEmpty()) {
+			throw new ResourceNotFoundException("Role Developer/Adm not permitted for quotation creation: " + roleNames);
 		}
-		UserType userType = UserType.valueOf(roleNames.get(0)); // Make sure roleNames is not empty
-		User user = userDAO.findByEmailAndUserTypeAndRegSource(loggedInUserEmail, userType,regSource)
-		    .orElseThrow(() -> new ResourceNotFoundException("User not found: " + loggedInUserEmail));
-		quotationEntity.setUpdatedBy(user.getBodSeqNo());
-		SiteMeasurement siteMeasurement=siteRepository.findByServiceRequestId(quotationEntity.getReqId());
-		quotationEntity.setReqId(siteMeasurement.getServiceRequestId());
-		quotationEntity.setUpdatedDate(new Date());
-		quotationEntity.setServicePersonId(user.getBodSeqNo());
-		return repository.save(quotationEntity);
+		if (roleNames.contains("Developer") || roleNames.contains("Adm")) {
+			throw new ResourceNotFoundException("Role Developer not found in: " + roleNames);
+		}
+		UserType userType;
+		try {
+			userType = UserType.valueOf(roleNames.get(0)); // Make sure roleNames is not empty
+		} catch (IllegalArgumentException e) {
+			throw new ResourceNotFoundException("Invalid UserType enum value: " + roleNames.get(0));
+		}
+
+		Date now = new Date();
+		for (QuotationEntity entity : quotationEntity) {
+			User user = userDAO.findByEmailAndUserTypeAndRegSource(
+							loggedInUserEmail, userType, entity.getRegSource())
+					.orElseThrow(() -> new ResourceNotFoundException("User not found for email: " + loggedInUserEmail
+							+ ", UserType: " + userType
+							+ ", RegSource: " + entity.getRegSource()));
+
+			SiteMeasurement siteMeasurement = siteRepository.findByServiceRequestId(entity.getReqId());
+			if (siteMeasurement == null) {
+				throw new ResourceNotFoundException("SiteMeasurement not found for Service Request ID: " + entity.getReqId());
+			}
+
+			entity.setUpdatedBy(user.getBodSeqNo());
+			entity.setReqId(siteMeasurement.getServiceRequestId());
+			entity.setUpdatedDate(now);
+			entity.setServicePersonId(user.getBodSeqNo());
+			entity.setRegSource(entity.getRegSource());
+			entity.setStatus("NEW");
+		}
+		return repository.saveAll(quotationEntity);
 	}
 
 	@Override
@@ -74,25 +103,26 @@ public class QuotationServiceImpl implements QuotationService {
 		String loggedInUserEmail = AuthDetailsProvider.getLoggedEmail();
 		Collection<? extends GrantedAuthority> loggedInRole = AuthDetailsProvider.getLoggedRole();
 		List<String> roleNames = loggedInRole.stream()
-		        .map(GrantedAuthority::getAuthority)
-		        .map(role -> role.replace("ROLE_", "")) // Remove "ROLE_" prefix
-		        .collect(Collectors.toList());
+				.map(GrantedAuthority::getAuthority)
+				.map(role -> role.replace("ROLE_", "")) // Remove "ROLE_" prefix
+				.collect(Collectors.toList());
 
 		if (roleNames.equals("Developer")||roleNames.equals("Adm")) {
-		    throw new ResourceNotFoundException("Role Developer not found in: " + roleNames);
+			throw new ResourceNotFoundException("Role Developer not found in: " + roleNames);
 		}
 		UserType userType = UserType.valueOf(roleNames.get(0)); // Make sure roleNames is not empty
 		User user = userDAO.findByEmailAndUserTypeAndRegSource(loggedInUserEmail, userType,regSource)
-		    .orElseThrow(() -> new ResourceNotFoundException("User not found: " + loggedInUserEmail));
-	    QuotationEntity existing = repository.findById(updatedQuotation.getReqId())
-	        .orElseThrow(() -> new EntityNotFoundException("Work assignment not found with recId: " + updatedQuotation.getReqId()));
+				.orElseThrow(() -> new ResourceNotFoundException("User not found: " + loggedInUserEmail));
+		QuotationEntity existing = repository.findById(updatedQuotation.getReqId())
+				.orElseThrow(() -> new EntityNotFoundException("Work assignment not found with recId: " + updatedQuotation.getReqId()));
 
-	    existing.setUpdatedBy(user.getBodSeqNo());
-	    existing.setUpdatedDate(new Date()); // Set current date/time
-	    existing.setStatus(updatedQuotation.getStatus());
-	    existing.setQuotedAmount(updatedQuotation.getQuotedAmount());
-	    return repository.save(existing);
+		existing.setUpdatedBy(user.getBodSeqNo());
+		existing.setUpdatedDate(new Date()); // Set current date/time
+		existing.setStatus(updatedQuotation.getStatus());
+		existing.setQuotedAmount(updatedQuotation.getQuotedAmount());
+		return repository.save(existing);
 	}
+
 
 	@Override
 	public List<QuotationEntity> getQuotation(String reqId, String customerId, String servicePersonId, String updatedBy) {
@@ -116,7 +146,7 @@ public class QuotationServiceImpl implements QuotationService {
 		    }
 		    query.select(root);
 		    if (!predicates.isEmpty()) {
-		        query.where(cb.and(predicates.toArray(new Predicate[0]))); // ✅ FIX: using AND instead of OR
+		        query.where(cb.and(predicates.toArray(new Predicate[0]))); //
 		    }
 
 		    return entityManager.createQuery(query).getResultList();

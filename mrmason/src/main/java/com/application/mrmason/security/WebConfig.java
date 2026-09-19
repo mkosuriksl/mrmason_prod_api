@@ -60,6 +60,7 @@ public class WebConfig {
 						"/api/fr/register","/api/fr/send-otp","/api/fr/verify-otp",
 						"/api/fr/login","/api/fr/forgot/verify-otp","/api/fr/forgot/send-otp",
 						"/carstand-api/getUserServiceCharegs-withoutSecurity",
+						"/api/public_header_detailed",
 						"/api/distinct-location-by-machine","/admin-machine-assets/get","/getUserServiceCharegs-withoutSecurity",
 						"/getBhatServiceCategory","/getBhatServiceCategory/nonCivil/{serviceCategory}","/getBhatServiceCategory/civil/{serviceCategory}",
 						"/swagger-resources", "/swagger-resources/**", "/configuration/ui", "/configuration/security","/api/distinct-location-by-ms","/distinct-location-by-sp",

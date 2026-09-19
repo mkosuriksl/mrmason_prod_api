@@ -581,78 +581,94 @@ public class UserService {
 	}
 
 
-	public ResponseSpLoginDto loginDetails(LoginRequest login) {
-
-		Optional<ServicePersonLogin> loginDb = emailLoginRepo.findByEmailOrMobileAndRegSource(login.getEmail(),
-				login.getMobile(), login.getRegSource());
+	public ResponseSpLoginDto loginDetails(LoginRequest login, RegSource regSource) {
 		ResponseSpLoginDto response = new ResponseSpLoginDto();
 
-		if (loginDb.isPresent()) {
-			Optional<User> userEmailMobile = userDAO.findByEmailOrMobileAndRegSource(login.getEmail(),
-					login.getMobile(), login.getRegSource());
-			User user = userEmailMobile.get();
-			String status = user.getStatus();
+		String email = (login.getEmail() != null) ? login.getEmail().trim() : null;
+		String mobile = (login.getMobile() != null) ? login.getMobile().trim() : null;
 
-			if (userEmailMobile.isPresent()) {
-				if (status != null && status.equalsIgnoreCase("active")) {
-					if (login.getEmail() != null && login.getMobile() == null) {
-						if (loginDb.get().getEVerify().equalsIgnoreCase("yes")) {
+		if (regSource == null) {
+			response.setMessage("regSource parameter is required");
+			response.setStatus(false);
+			return response;
+		}
 
-							if (byCrypt.matches(login.getPassword(), user.getPassword())) {
-								String jwtToken = jwtService.generateToken(userEmailMobile.get(), user.getBodSeqNo());
-								response.setJwtToken(jwtToken);
-								response.setMessage("Login Successful.");
-								response.setStatus(true);
-								response.setLoginDetails(getServiceProfile(login.getEmail(), login.getRegSource()));
-								return response;
-							} else {
-								response.setMessage("Invalid Password");
-								response.setStatus(false);
-								return response;
-							}
-						} else {
-							response.setMessage("verify Email");
-							response.setStatus(false);
-							return response;
-						}
-					} else if (login.getEmail() == null && login.getMobile() != null) {
-						if (loginDb.get().getMobVerify().equalsIgnoreCase("yes")) {
+		Optional<ServicePersonLogin> loginDb = Optional.empty();
 
-							if (byCrypt.matches(login.getPassword(), user.getPassword())) {
-								String jwtToken = jwtService.generateToken(userEmailMobile.get(), user.getBodSeqNo());
-								response.setJwtToken(jwtToken);
-								response.setMessage("Login Successful.");
-								response.setStatus(true);
-								response.setLoginDetails(
-										getServiceProfile(loginDb.get().getEmail(), login.getRegSource()));
-								return response;
-							} else {
-								response.setMessage("Invalid Password");
-								response.setStatus(false);
-								return response;
-							}
-						} else {
-							response.setMessage("verify Mobile");
-							response.setStatus(false);
-							return response;
-						}
-					}
-				} else {
-					response.setMessage("Account status : " + user.getStatus());
-					response.setStatus(false);
-					return response;
-				}
-			} else {
-				response.setMessage("Inactive User");
+		if (email != null && !email.isEmpty()) {
+			List<ServicePersonLogin> list = emailLoginRepo.findByUserEmailAndRegSource(email, regSource);
+			if (!list.isEmpty()) {
+				loginDb = Optional.of(list.get(0));
+			}
+		} else if (mobile != null && !mobile.isEmpty()) {
+			List<ServicePersonLogin> list = emailLoginRepo.findByUserMobileAndRegSource(mobile, regSource);
+			if (!list.isEmpty()) {
+				loginDb = Optional.of(list.get(0));
+			}
+		}
+
+		if (loginDb.isEmpty()) {
+			response.setMessage("Invalid user for registration source: " + regSource);
+			response.setStatus(false);
+			return response;
+		}
+
+		ServicePersonLogin spLogin = loginDb.get();
+
+		Optional<User> userDb = Optional.empty();
+
+		if (email != null && !email.isEmpty()) {
+			userDb = userDAO.findByEmailAndRegSource(email, regSource);
+		} else if (mobile != null && !mobile.isEmpty()) {
+			userDb = userDAO.findByMobileAndRegSource(mobile, regSource);
+		}
+
+		if (userDb.isEmpty()) {
+			response.setMessage("Inactive User");
+			response.setStatus(false);
+			return response;
+		}
+
+		User user = userDb.get();
+
+		if (!"active".equalsIgnoreCase(user.getStatus())) {
+			response.setMessage("Account status : " + user.getStatus());
+			response.setStatus(false);
+			return response;
+		}
+
+		if (email != null && !email.isEmpty()) {
+			if (!"yes".equalsIgnoreCase(spLogin.getEVerify())) {
+				response.setMessage("verify Email");
 				response.setStatus(false);
 				return response;
 			}
-
+		} else if (mobile != null && !mobile.isEmpty()) {
+			if (!"yes".equalsIgnoreCase(spLogin.getMobVerify())) {
+				response.setMessage("verify Mobile");
+				response.setStatus(false);
+				return response;
+			}
 		}
-		response.setMessage("Invalid User.!");
-		response.setStatus(false);
-		return response;
+
+		if (byCrypt.matches(login.getPassword(), user.getPassword())) {
+			String jwtToken = jwtService.generateToken(user, user.getBodSeqNo());
+
+			response.setJwtToken(jwtToken);
+			response.setMessage("Login Successful.");
+			response.setStatus(true);
+
+			String identifier = (email != null && !email.isEmpty()) ? email : spLogin.getEmail();
+			response.setLoginDetails(getServiceProfile(identifier, regSource));
+
+			return response;
+		} else {
+			response.setMessage("Invalid Password");
+			response.setStatus(false);
+			return response;
+		}
 	}
+
 
 	public User getServiceDataProfile(String email) {
 
@@ -664,7 +680,6 @@ public class UserService {
 	public ResponseMessageDto servicePersonDeleteAccount(DeleteAccountRequest accountRequest) {
 		ResponseMessageDto response = new ResponseMessageDto();
 
-		// Retrieve the user based on the given ID
 		User user = userDAO.findByBodSeqNo(accountRequest.getSpId());
 		if (user == null) {
 			response.setMessage("Account not found.");
