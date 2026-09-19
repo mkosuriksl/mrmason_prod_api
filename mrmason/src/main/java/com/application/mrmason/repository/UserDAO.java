@@ -169,7 +169,12 @@ public interface UserDAO extends JpaRepository<User, String> {
             String mobile);
 
 
-    @Query("SELECT s FROM User s WHERE (s.email = :email OR s.mobile = :mobile) AND s.regSource = :regSource")
+    @Query("""
+            SELECT u
+            FROM User u
+            WHERE (u.email = :email OR u.mobile = :mobile)
+            AND u.regSource = :regSource
+            """)
     Optional<User> findByEmailOrMobileAndRegSource(
             @Param("email") String email,
             @Param("mobile") String mobile,
@@ -180,11 +185,15 @@ public interface UserDAO extends JpaRepository<User, String> {
     // CHECK EMAIL OR MOBILE
     // =========================================================
 
-    @Query("SELECT u FROM User u WHERE (u.email = :email OR u.mobile = :mobile) AND u.regSource = :regSource")
+    @Query("""
+            SELECT u
+            FROM User u
+            WHERE u.email = :email
+            OR u.mobile = :mobile
+            """)
     List<User> findByEmailANDMobile(
             @Param("email") String email,
-            @Param("mobile") String mobile,
-            @Param("regSource") RegSource regSource);
+            @Param("mobile") String mobile);
 
 
     // =========================================================

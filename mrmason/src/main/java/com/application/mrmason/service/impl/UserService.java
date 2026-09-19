@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -58,29 +57,67 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 
 @Service
-@RequiredArgsConstructor
 public class UserService {
+	
+	@Autowired
+	private AdminSpVerificationRepository adminSpVerificationRepository;
 
-	private final AdminSpVerificationRepository adminSpVerificationRepository;
-	private final EntityManager entityManager;
-	private final OtpGenerationServiceImpl otpService;
-	private final ServicePersonLoginDAO emailLoginRepo;
-	private final AWSConfig awsConfig;
-	private final UploadUserProfilemageRepository userProfilemageRepository;
-	private final UserDAO userDAO;
-	private final JwtService jwtService;
-	private final ServicePersonLoginDAO serviceLoginRepo;
-	private final BCryptPasswordEncoder byCrypt;
-	private final SpServiceDetailsRepo detailsRepo;
-	private final JavaMailSender mailsender;
-	private final SmsService smsService;
-	private final EmailServiceImpl emailService;
-	private final DeleteUserRepo deleteUserRepo;
-	private final SPAvailabilityRepo availabilityReo;
+	@PersistenceContext
+	private EntityManager entityManager;
+
+	@Autowired
+	OtpGenerationServiceImpl otpService;
+
+	@Autowired
+	ServicePersonLoginDAO emailLoginRepo;
+
+	@Autowired
+	private AWSConfig awsConfig;
+
+	@Autowired
+	private UploadUserProfilemageRepository userProfilemageRepository;
+
+	@Autowired
+	UserDAO userDAO;
+
+	@Autowired
+	JwtService jwtService;
+
+	@Autowired
+	ServicePersonLoginDAO serviceLoginRepo;
+
+	@Autowired
+	BCryptPasswordEncoder byCrypt;
+
+	@Autowired
+	private SpServiceDetailsRepo detailsRepo;
+
+	@Autowired
+	private JavaMailSender mailsender;
+
+	@Autowired
+	private SmsService smsService;
+
+	@Autowired
+	private EmailServiceImpl emailService;
+
+	@Autowired
+	private DeleteUserRepo deleteUserRepo;
+	
+	@Autowired
+	SPAvailabilityRepo availabilityReo;
 
 	public Optional<User> checkExistingUser(String email, String phone, RegSource regSource) {
-		List<User> users = userDAO.findByEmailANDMobile(email, phone, regSource);
+		List<User> users = userDAO.findByEmailANDMobile(email, phone);
 		return users.stream().filter(user -> user.getRegSource().equals(regSource)).findFirst();
+	}
+
+	public boolean isEmailExists(String email) {
+		return userDAO.existsByEmail(email);
+	}
+
+	public boolean isMobileExists(String mobile) {
+		return userDAO.existsByMobile(mobile);
 	}
 
 	// @Transactional
@@ -628,66 +665,75 @@ public Userdto addDetails(User user) {
 
 	public ResponseSpLoginDto loginDetails(LoginRequest login) {
 
-		Optional<ServicePersonLogin>
-				loginDb = emailLoginRepo.findByEmailOrMobileAndRegSource(login.getEmail(), login.getMobile(), login.getRegSource());
-
+		Optional<ServicePersonLogin> loginDb = emailLoginRepo.findByEmailOrMobileAndRegSource(login.getEmail(),
+				login.getMobile(), login.getRegSource());
 		ResponseSpLoginDto response = new ResponseSpLoginDto();
 
-		if (loginDb.isEmpty()) {
-			response.setMessage("Invalid user.!");
-			response.setStatus(false);
-			return response;
-		}
+		if (loginDb.isPresent()) {
+			Optional<User> userEmailMobile = userDAO.findByEmailOrMobileAndRegSource(login.getEmail(),
+					login.getMobile(), login.getRegSource());
+			User user = userEmailMobile.get();
+			String status = user.getStatus();
 
-		Optional<User> userEmailMobile = userDAO.findByEmailOrMobileAndRegSource(login.getEmail(),
-				login.getMobile(), login.getRegSource());
+			if (userEmailMobile.isPresent()) {
+				if (status != null && status.equalsIgnoreCase("active")) {
+					if (login.getEmail() != null && login.getMobile() == null) {
+						if (loginDb.get().getEVerify().equalsIgnoreCase("yes")) {
 
-		if (userEmailMobile.isEmpty()) {
-			response.setMessage("Inactive User");
-			response.setStatus(false);
-			return response;
-		}
-		User user = userEmailMobile.get();
-		ServicePersonLogin spLogin = loginDb.get();
+							if (byCrypt.matches(login.getPassword(), user.getPassword())) {
+								String jwtToken = jwtService.generateToken(userEmailMobile.get(), user.getBodSeqNo());
+								response.setJwtToken(jwtToken);
+								response.setMessage("Login Successful.");
+								response.setStatus(true);
+								response.setLoginDetails(getServiceProfile(login.getEmail(), login.getRegSource()));
+								return response;
+							} else {
+								response.setMessage("Invalid Password");
+								response.setStatus(false);
+								return response;
+							}
+						} else {
+							response.setMessage("verify Email");
+							response.setStatus(false);
+							return response;
+						}
+					} else if (login.getEmail() == null && login.getMobile() != null) {
+						if (loginDb.get().getMobVerify().equalsIgnoreCase("yes")) {
 
-		if (user.getStatus() == null || !"active".equalsIgnoreCase(user.getStatus())) {
-			response.setMessage("Account status : " + user.getStatus());
-			response.setStatus(false);
-			return response;
-		}
-		boolean isVerified = false;
-		if (login.getEmail() != null) {
-			if ("yes".equalsIgnoreCase(spLogin.getEVerify())) {
-				isVerified = true;
+							if (byCrypt.matches(login.getPassword(), user.getPassword())) {
+								String jwtToken = jwtService.generateToken(userEmailMobile.get(), user.getBodSeqNo());
+								response.setJwtToken(jwtToken);
+								response.setMessage("Login Successful.");
+								response.setStatus(true);
+								response.setLoginDetails(
+										getServiceProfile(loginDb.get().getEmail(), login.getRegSource()));
+								return response;
+							} else {
+								response.setMessage("Invalid Password");
+								response.setStatus(false);
+								return response;
+							}
+						} else {
+							response.setMessage("verify Mobile");
+							response.setStatus(false);
+							return response;
+						}
+					}
+				} else {
+					response.setMessage("Account status : " + user.getStatus());
+					response.setStatus(false);
+					return response;
+				}
 			} else {
-				response.setMessage("verify Email");
+				response.setMessage("Inactive User");
 				response.setStatus(false);
 				return response;
 			}
-		} else if (login.getMobile() != null) {
-			if ("yes".equalsIgnoreCase(spLogin.getMobVerify())) {
-				isVerified = true;
-			} else {
-				response.setMessage("verify Mobile");
-				response.setStatus(false);
-				return response;
-			}
-		}
 
-		if (byCrypt.matches(login.getPassword(), user.getPassword())) {
-			String jwtToken = jwtService.generateToken(userEmailMobile.get(), user.getBodSeqNo());
-			response.setJwtToken(jwtToken);
-			response.setMessage("Login Successful.");
-			response.setStatus(true);
-			String identifier = (login.getEmail() != null) ? login.getEmail() : spLogin.getEmail();
-			response.setLoginDetails(
-					getServiceProfile(identifier, login.getRegSource()));
-			return response;
-		} else {
-			response.setMessage("Invalid Password");
-			response.setStatus(false);
-			return response;
 		}
+		response.setMessage("Invalid User.!");
+		response.setStatus(false);
+		return response;
 	}
 
 	public User getServiceDataProfile(String email) {
