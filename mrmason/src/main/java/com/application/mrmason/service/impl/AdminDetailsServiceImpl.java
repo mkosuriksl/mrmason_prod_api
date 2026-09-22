@@ -2,7 +2,7 @@ package com.application.mrmason.service.impl;
 
 import java.util.Optional;
 
-import com.application.mrmason.security.PasswordEncoder;
+
 import jakarta.persistence.EntityExistsException;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;

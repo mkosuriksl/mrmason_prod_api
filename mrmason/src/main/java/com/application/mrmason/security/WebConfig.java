@@ -8,6 +8,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -18,18 +19,18 @@ public class WebConfig {
 
 	@Autowired
 	CustomUserService registrationService;
-	private final BCryptPasswordEncoder bCryptPasswordEncoder;
+	private final PasswordEncoder passwordEncoder;
 
 	@Autowired
-	public WebConfig(BCryptPasswordEncoder bCryptPasswordEncoder) {
-		this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+	public WebConfig(PasswordEncoder passwordEncoder) {
+		this.passwordEncoder = passwordEncoder;
 	}
 
 	@Bean
 	public DaoAuthenticationProvider customDaoAuthenticationProvider() {
 		DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
 		provider.setUserDetailsService(registrationService);
-		provider.setPasswordEncoder(bCryptPasswordEncoder);
+		provider.setPasswordEncoder(passwordEncoder);
 		return provider;
 	}
 
@@ -64,8 +65,10 @@ public class WebConfig {
 						"/api/distinct-location-by-machine","/admin-machine-assets/get","/getUserServiceCharegs-withoutSecurity",
 						"/getBhatServiceCategory","/getBhatServiceCategory/nonCivil/{serviceCategory}","/getBhatServiceCategory/civil/{serviceCategory}",
 						"/swagger-resources", "/swagger-resources/**", "/configuration/ui", "/configuration/security","/api/distinct-location-by-ms","/distinct-location-by-sp",
-						"/swagger-ui/**", "/webjars/**", "/swagger-ui.html", "/getRentalAssetsNoAuth","/getAdminUiEndPoint","/api/home-search-by-location","/api/home-search-by-machine").permitAll()
+						"/swagger-ui/**", "/webjars/**", "/swagger-ui.html", "/getRentalAssetsNoAuth","/getAdminUiEndPoint","/api/home-search-by-location","/api/home-search-by-machine",
+								"api/super-admin/**").permitAll()
 						.requestMatchers("/api/quotation/get_all_quotation_info").hasAnyRole("MS", "Adm")
+						.requestMatchers("/api/admin-roles/create-role").hasAnyRole("SADM", "Adm")
 						.anyRequest().authenticated());
 
 		http.authenticationProvider(customDaoAuthenticationProvider());
