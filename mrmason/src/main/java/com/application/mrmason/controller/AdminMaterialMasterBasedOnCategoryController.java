@@ -66,7 +66,11 @@ public class AdminMaterialMasterBasedOnCategoryController {
 
         return ResponseEntity.ok(result);
     }
+<<<<<<< Updated upstream:mrmason/src/main/java/com/application/mrmason/controller/AdminMaterialMasterBasedOnCategoryController.java
 	@PutMapping("/update")
+=======
+	@PutMapping("/update-by-category")
+>>>>>>> Stashed changes:mrmason/mrmason/src/main/java/com/application/mrmason/controller/AdminMaterialMasterBasedOnCategoryController.java
 	public ResponseEntity<GenericResponse<List<AdminMaterialMaster>>> updateAdminMaterialMasters(
 			@RequestBody AdminMaterialMasterRequestDTO requestDTO, @RequestParam("regSource") RegSource regSource)
 			throws AccessDeniedException {
@@ -151,4 +155,8 @@ public class AdminMaterialMasterBasedOnCategoryController {
 				location);
 	}
 
+<<<<<<< Updated upstream:mrmason/src/main/java/com/application/mrmason/controller/AdminMaterialMasterBasedOnCategoryController.java
 }
+=======
+}
+>>>>>>> Stashed changes:mrmason/mrmason/src/main/java/com/application/mrmason/controller/AdminMaterialMasterBasedOnCategoryController.java

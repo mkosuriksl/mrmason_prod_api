@@ -1,37 +1,35 @@
-
 package com.application.mrmason.service.impl;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.application.mrmason.dto.ElectricalMasterRequest;
-import com.application.mrmason.dto.ElectricalMasterResponse;
-import com.application.mrmason.entity.ElectricalMaster;
+import com.application.mrmason.dto.PlumbingMasterRequest;
+import com.application.mrmason.dto.PlumbingMasterResponse;
 import com.application.mrmason.entity.MaterialSupplierQuotationUser;
+import com.application.mrmason.entity.PlumbingMaster;
 import com.application.mrmason.entity.StoreMaster;
 import com.application.mrmason.enums.RegSource;
-import com.application.mrmason.repository.ElectricalMasterRepository;
 import com.application.mrmason.repository.MaterialSupplierQuotationUserDAO;
+import com.application.mrmason.repository.PlumbingMasterRepository;
 import com.application.mrmason.repository.StoreMasterRepository;
 import com.application.mrmason.security.AuthDetailsProvider;
-import com.application.mrmason.service.ElectricalMasterService;
+import com.application.mrmason.service.PlumbingMasterService;
 
 @Service
-public class ElectricalMasterServiceImpl
-        implements ElectricalMasterService {
+public class PlumbingMasterServiceImpl
+        implements PlumbingMasterService {
 
     // ============================================================
     // REPOSITORIES
     // ============================================================
 
     @Autowired
-    private ElectricalMasterRepository electricalMasterRepository;
+    private PlumbingMasterRepository plumbingMasterRepository;
 
     @Autowired
     private MaterialSupplierQuotationUserDAO materialSupplierUserDAO;
@@ -158,7 +156,7 @@ public class ElectricalMasterServiceImpl
 
 
     // ============================================================
-    // CREATE ELECTRICAL MASTER
+    // CREATE PLUMBING MASTER
     //
     // POST
     // ONLY MS
@@ -166,8 +164,8 @@ public class ElectricalMasterServiceImpl
 
     @Override
     @Transactional
-    public ElectricalMasterResponse create(
-            ElectricalMasterRequest request) {
+    public PlumbingMasterResponse create(
+            PlumbingMasterRequest request) {
 
         // --------------------------------------------------------
         // REQUEST VALIDATION
@@ -214,12 +212,12 @@ public class ElectricalMasterServiceImpl
                         .trim()
                         .isEmpty()) {
 
-            if (!"Electrical".equalsIgnoreCase(
+            if (!"Plumbing".equalsIgnoreCase(
                     request.getProductCategory().trim())) {
 
                 throw new IllegalArgumentException(
                         "Invalid product category. "
-                                + "Expected Electrical");
+                                + "Expected Plumbing");
             }
         }
 
@@ -309,12 +307,12 @@ public class ElectricalMasterServiceImpl
         // DUPLICATE CHECK
         // --------------------------------------------------------
 
-        if (electricalMasterRepository
+        if (plumbingMasterRepository
                 .existsByUserIdStoreIdSku(
                         userIdStoreIdSku)) {
 
             throw new IllegalArgumentException(
-                    "Electrical product already exists: "
+                    "Plumbing product already exists: "
                             + userIdStoreIdSku);
         }
 
@@ -323,15 +321,15 @@ public class ElectricalMasterServiceImpl
         // CREATE ENTITY
         // --------------------------------------------------------
 
-        ElectricalMaster electricalMaster =
-                new ElectricalMaster();
+        PlumbingMaster plumbingMaster =
+                new PlumbingMaster();
 
 
         // --------------------------------------------------------
         // PRIMARY KEY
         // --------------------------------------------------------
 
-        electricalMaster.setUserIdStoreIdSku(
+        plumbingMaster.setUserIdStoreIdSku(
                 userIdStoreIdSku);
 
 
@@ -339,15 +337,15 @@ public class ElectricalMasterServiceImpl
         // PRODUCT CATEGORY
         // --------------------------------------------------------
 
-        electricalMaster.setProductCategory(
-                "Electrical");
+        plumbingMaster.setProductCategory(
+                "Plumbing");
 
 
         // --------------------------------------------------------
         // SKU
         // --------------------------------------------------------
 
-        electricalMaster.setSku(
+        plumbingMaster.setSku(
                 sku);
 
 
@@ -355,7 +353,7 @@ public class ElectricalMasterServiceImpl
         // PRODUCT NAME
         // --------------------------------------------------------
 
-        electricalMaster.setProductName(
+        plumbingMaster.setProductName(
                 productName);
 
 
@@ -369,7 +367,7 @@ public class ElectricalMasterServiceImpl
 
         if (productDescription != null) {
 
-            electricalMaster.setProductDescription(
+            plumbingMaster.setProductDescription(
                     productDescription.trim());
         }
 
@@ -384,7 +382,7 @@ public class ElectricalMasterServiceImpl
 
         if (dimensions != null) {
 
-            electricalMaster.setDimensions(
+            plumbingMaster.setDimensions(
                     dimensions.trim());
         }
 
@@ -401,17 +399,17 @@ public class ElectricalMasterServiceImpl
         // String storeId
         // --------------------------------------------------------
 
-        electricalMaster.setStore(store);
+        plumbingMaster.setStore(store);
 
 
         // --------------------------------------------------------
         // AUDIT
         // --------------------------------------------------------
 
-        electricalMaster.setUpdatedBy(
+        plumbingMaster.setUpdatedBy(
                 userId);
 
-        electricalMaster.setUpdatedDate(
+        plumbingMaster.setUpdatedDate(
                 LocalDateTime.now());
 
 
@@ -419,9 +417,9 @@ public class ElectricalMasterServiceImpl
         // SAVE
         // --------------------------------------------------------
 
-        ElectricalMaster saved =
-                electricalMasterRepository.save(
-                        electricalMaster);
+        PlumbingMaster saved =
+                plumbingMasterRepository.save(
+                        plumbingMaster);
 
 
         return convertToResponse(saved);
@@ -431,58 +429,134 @@ public class ElectricalMasterServiceImpl
     // ============================================================
     // GET FOR LOGGED-IN MATERIAL SUPPLIER
     //
-    // GET /api/electrical-master
+    // GET /api/plumbing-master
     // ============================================================
 
-   @Override
-@Transactional(readOnly = true)
-public List<ElectricalMasterResponse> getForMs() {
+    @Override
+    @Transactional(readOnly = true)
+    public PlumbingMasterResponse getForMs(
+            String storeId,
+            String updatedBy,
+            String productCategory,
+            String productSubCategory) {
 
-    // ============================================================
-    // GET AUTHENTICATED SUPPLIER FROM JWT
-    // ============================================================
+        // --------------------------------------------------------
+        // GET AUTHENTICATED SUPPLIER
+        // --------------------------------------------------------
 
-    String userId =
-            getLoggedInMaterialSupplierUserId();
-
-
-    // ============================================================
-    // GET ELECTRICAL RECORDS FOR LOGGED-IN MS
-    // ============================================================
-
-    List<ElectricalMaster> records =
-            electricalMasterRepository
-                    .findByUpdatedBy(userId);
+        String userId =
+                getLoggedInMaterialSupplierUserId();
 
 
-    // ============================================================
-    // NO DATA
-    // ============================================================
+        // --------------------------------------------------------
+        // NEVER TRUST updatedBy FROM REQUEST
+        // --------------------------------------------------------
 
-    if (records == null
-            || records.isEmpty()) {
+        List<PlumbingMaster> records;
 
-        throw new IllegalArgumentException(
-                "No electrical products found");
+
+        // --------------------------------------------------------
+        // STORE FILTER
+        // --------------------------------------------------------
+
+        if (storeId != null
+                && !storeId.trim().isEmpty()) {
+
+            records =
+                    plumbingMasterRepository
+                            .findByStore_StoreIdAndUpdatedBy(
+                                    storeId.trim(),
+                                    userId);
+
+        } else {
+
+            records =
+                    plumbingMasterRepository
+                            .findByUpdatedBy(
+                                    userId);
+        }
+
+
+        // --------------------------------------------------------
+        // PRODUCT CATEGORY VALIDATION
+        // --------------------------------------------------------
+
+        if (productCategory != null
+                && !productCategory.trim().isEmpty()) {
+
+            if (!"Plumbing".equalsIgnoreCase(
+                    productCategory.trim())) {
+
+                throw new IllegalArgumentException(
+                        "Invalid product category. "
+                                + "Expected Plumbing");
+            }
+        }
+
+
+        // --------------------------------------------------------
+        // PRODUCT SUB CATEGORY
+        //
+        // There is no separate productSubCategory column
+        // in PlumbingMaster.
+        //
+        // The nested object contains:
+        // SKU
+        // productName
+        // productDescription
+        // dimensions
+        //
+        // Therefore no separate DB filter is applied here.
+        // --------------------------------------------------------
+
+
+        // --------------------------------------------------------
+        // NO DATA
+        // --------------------------------------------------------
+
+        if (records == null
+                || records.isEmpty()) {
+
+            throw new IllegalArgumentException(
+                    "No plumbing products found");
+        }
+
+
+        /*
+         * IMPORTANT:
+         *
+         * PlumbingMasterResponse currently contains:
+         *
+         * ProductSubCategory productSubCategory;
+         *
+         * NOT:
+         *
+         * List<ProductSubCategory>
+         *
+         * Therefore this response can represent only ONE
+         * product.
+         *
+         * If storeId is supplied, returning the first record
+         * is normally the expected single-product response.
+         */
+
+        return convertToResponse(
+                records.get(0));
     }
 
 
     // ============================================================
-    // RETURN FIRST RECORD
-    // SAME AS PLUMBING IMPLEMENTATION
+    // UPDATE PLUMBING MASTER
+    //
+    // PUT
+    // ONLY MS
     // ============================================================
-
-    return records.stream()
-            .map(this::convertToResponse)
-            .collect(Collectors.toList());
-}
-  
 
     @Override
     @Transactional
-    public ElectricalMasterResponse update(
+    public PlumbingMasterResponse update(
             String userIdStoreIdSku,
-            ElectricalMasterRequest request) {
+            PlumbingMasterRequest request) {
 
         // --------------------------------------------------------
         // PRIMARY KEY VALIDATION
@@ -532,13 +606,13 @@ public List<ElectricalMasterResponse> getForMs() {
         // FIND EXISTING RECORD
         // --------------------------------------------------------
 
-        ElectricalMaster existing =
-                electricalMasterRepository
+        PlumbingMaster existing =
+                plumbingMasterRepository
                         .findByUserIdStoreIdSku(
                                 userIdStoreIdSku.trim())
                         .orElseThrow(() ->
                                 new IllegalArgumentException(
-                                        "Electrical product not found: "
+                                        "Plumbing product not found: "
                                                 + userIdStoreIdSku));
 
 
@@ -552,7 +626,7 @@ public List<ElectricalMasterResponse> getForMs() {
 
             throw new IllegalArgumentException(
                     "You are not authorized to update "
-                            + "this electrical product");
+                            + "this plumbing product");
         }
 
 
@@ -582,7 +656,7 @@ public List<ElectricalMasterResponse> getForMs() {
             if (existingStoreId == null) {
 
                 throw new IllegalArgumentException(
-                        "Existing electrical product has no store");
+                        "Existing plumbing product has no store");
             }
 
 
@@ -692,7 +766,7 @@ public List<ElectricalMasterResponse> getForMs() {
         // ========================================================
 
         existing.setProductCategory(
-                "Electrical");
+                "Plumbing");
 
 
         // ========================================================
@@ -710,8 +784,8 @@ public List<ElectricalMasterResponse> getForMs() {
         // SAVE
         // ========================================================
 
-        ElectricalMaster updated =
-                electricalMasterRepository.save(
+        PlumbingMaster updated =
+                plumbingMasterRepository.save(
                         existing);
 
 
@@ -722,18 +796,18 @@ public List<ElectricalMasterResponse> getForMs() {
     // ============================================================
     // GET FOR ALL USERS
     //
-    // GET /api/electrical-master/all
+    // GET /api/plumbing-master/all
     // ============================================================
 
     @Override
     @Transactional(readOnly = true)
-    public List<ElectricalMasterResponse> getForAll() {
+    public List<PlumbingMasterResponse> getForAll() {
 
-        List<ElectricalMaster> records =
-                electricalMasterRepository.findAll();
+        List<PlumbingMaster> records =
+                plumbingMasterRepository.findAll();
 
 
-        List<ElectricalMasterResponse> response =
+        List<PlumbingMasterResponse> response =
                 new ArrayList<>();
 
 
@@ -744,7 +818,7 @@ public List<ElectricalMasterResponse> getForMs() {
         }
 
 
-        for (ElectricalMaster entity : records) {
+        for (PlumbingMaster entity : records) {
 
             response.add(
                     convertToResponse(entity));
@@ -759,11 +833,11 @@ public List<ElectricalMasterResponse> getForMs() {
     // ENTITY -> RESPONSE
     // ============================================================
 
-    private ElectricalMasterResponse convertToResponse(
-            ElectricalMaster entity) {
+    private PlumbingMasterResponse convertToResponse(
+            PlumbingMaster entity) {
 
-        ElectricalMasterResponse response =
-                new ElectricalMasterResponse();
+        PlumbingMasterResponse response =
+                new PlumbingMasterResponse();
 
 
         // --------------------------------------------------------
@@ -800,9 +874,9 @@ public List<ElectricalMasterResponse> getForMs() {
         // Response DTO contains ONE object.
         // --------------------------------------------------------
 
-        ElectricalMasterResponse.ProductSubCategory
+        PlumbingMasterResponse.ProductSubCategory
                 subCategory =
-                new ElectricalMasterResponse
+                new PlumbingMasterResponse
                         .ProductSubCategory();
 
 
@@ -841,7 +915,3 @@ public List<ElectricalMasterResponse> getForMs() {
         return response;
     }
 }
-<<<<<<< Updated upstream:mrmason/src/main/java/com/application/mrmason/service/impl/ElectricalMasterServiceImpl.java
-
-=======
->>>>>>> Stashed changes:mrmason/mrmason/src/main/java/com/application/mrmason/service/impl/ElectricalMasterServiceImpl.java

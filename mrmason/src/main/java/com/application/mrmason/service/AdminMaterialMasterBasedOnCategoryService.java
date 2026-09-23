@@ -45,4 +45,8 @@ List<MaterialGroupDTO> createAdminMaterialMaster(
 
 	public AdminMaterialMasterResponseDTO getMaterialsWithUserInfo(String materialCategory, String materialSubCategory,
 			String brand, String location);
+<<<<<<< Updated upstream:mrmason/src/main/java/com/application/mrmason/service/AdminMaterialMasterBasedOnCategoryService.java
 }
+=======
+}
+>>>>>>> Stashed changes:mrmason/mrmason/src/main/java/com/application/mrmason/service/AdminMaterialMasterBasedOnCategoryService.java
