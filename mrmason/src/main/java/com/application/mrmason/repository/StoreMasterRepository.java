@@ -1,6 +1,5 @@
 package com.application.mrmason.repository;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,11 +14,6 @@ public interface StoreMasterRepository
     boolean existsByStoreId(String storeId);
 
     boolean existsByGst(String gst);
-    Optional<StoreMaster> findByStoreIdAndUpdatedBy(
-        String storeId,
-        String userId);
 
     Optional<StoreMaster> findByStoreId(String storeId);
-
-    List<StoreMaster> findByUpdatedBy(String userId);
 }

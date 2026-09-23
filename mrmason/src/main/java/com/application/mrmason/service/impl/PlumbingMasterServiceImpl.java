@@ -1,10 +1,12 @@
+
 package com.application.mrmason.service.impl;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,405 +15,135 @@ import com.application.mrmason.dto.PlumbingMasterResponse;
 import com.application.mrmason.entity.MaterialSupplierQuotationUser;
 import com.application.mrmason.entity.PlumbingMaster;
 import com.application.mrmason.entity.StoreMaster;
-import com.application.mrmason.enums.RegSource;
-import com.application.mrmason.repository.MaterialSupplierQuotationUserDAO;
 import com.application.mrmason.repository.PlumbingMasterRepository;
 import com.application.mrmason.repository.StoreMasterRepository;
-import com.application.mrmason.security.AuthDetailsProvider;
 import com.application.mrmason.service.PlumbingMasterService;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class PlumbingMasterServiceImpl
         implements PlumbingMasterService {
 
-    // ============================================================
-    // REPOSITORIES
-    // ============================================================
+    private final PlumbingMasterRepository plumbingMasterRepository;
 
-    @Autowired
-    private PlumbingMasterRepository plumbingMasterRepository;
-
-    @Autowired
-    private MaterialSupplierQuotationUserDAO materialSupplierUserDAO;
-
-    @Autowired
-    private StoreMasterRepository storeMasterRepository;
-
+    private final StoreMasterRepository storeMasterRepository;
 
     // ============================================================
-    // GET LOGGED-IN MATERIAL SUPPLIER USER ID
-    // ============================================================
-
-    private String getLoggedInMaterialSupplierUserId() {
-
-        // --------------------------------------------------------
-        // GET EMAIL FROM JWT
-        // --------------------------------------------------------
-
-        String email =
-                AuthDetailsProvider.getLoggedEmail();
-
-        if (email == null
-                || email.trim().isEmpty()) {
-
-            throw new IllegalArgumentException(
-                    "Logged-in user not found");
-        }
-
-        String loggedInEmail =
-                email.trim();
-
-
-        // --------------------------------------------------------
-        // FIND MATERIAL SUPPLIER
-        // --------------------------------------------------------
-
-        MaterialSupplierQuotationUser supplier =
-                materialSupplierUserDAO
-                        .findByEmailAndRegSource(
-                                loggedInEmail,
-                                RegSource.MRMASON)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Material Supplier registration "
-                                                + "not found for email: "
-                                                + loggedInEmail
-                                                + ", regSource: MRMASON"));
-
-
-        // --------------------------------------------------------
-        // CHECK SUPPLIER STATUS
-        // --------------------------------------------------------
-
-        if (supplier.getStatus() == null
-                || !"active".equalsIgnoreCase(
-                        supplier.getStatus())) {
-
-            throw new IllegalArgumentException(
-                    "Material Supplier is not active for email: "
-                            + loggedInEmail);
-        }
-
-
-        // --------------------------------------------------------
-        // GET BOD SEQ NO
-        // --------------------------------------------------------
-
-        String userId =
-                supplier.getBodSeqNo();
-
-        if (userId == null
-                || userId.trim().isEmpty()) {
-
-            throw new IllegalArgumentException(
-                    "bodSeqNo not found for Material Supplier: "
-                            + loggedInEmail);
-        }
-
-        return userId.trim();
-    }
-
-
-    // ============================================================
-    // FIND STORE BELONGING TO LOGGED-IN MATERIAL SUPPLIER
-    // ============================================================
-
-    private StoreMaster getSupplierStore(
-            String storeId,
-            String userId) {
-
-        if (storeId == null
-                || storeId.trim().isEmpty()) {
-
-            throw new IllegalArgumentException(
-                    "Store ID is required");
-        }
-
-        String trimmedStoreId =
-                storeId.trim();
-
-
-        /*
-         * We check:
-         *
-         * storeId
-         * +
-         * updatedBy = logged-in MS userId
-         *
-         * Therefore one Material Supplier cannot use
-         * another Material Supplier's store.
-         */
-
-        return storeMasterRepository
-                .findByStoreIdAndUpdatedBy(
-                        trimmedStoreId,
-                        userId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Store not found or does not belong "
-                                        + "to the logged-in Material "
-                                        + "Supplier: "
-                                        + trimmedStoreId));
-    }
-
-
-    // ============================================================
-    // CREATE PLUMBING MASTER
-    //
-    // POST
-    // ONLY MS
+    // CREATE
     // ============================================================
 
     @Override
-    @Transactional
-    public PlumbingMasterResponse create(
+    public PlumbingMasterResponse createPlumbingMaster(
             PlumbingMasterRequest request) {
 
         // --------------------------------------------------------
-        // REQUEST VALIDATION
+        // CREATE REQUIRES ALL REQUIRED FIELDS
         // --------------------------------------------------------
 
-        if (request == null) {
-
-            throw new IllegalArgumentException(
-                    "Request cannot be null");
-        }
-
+        validateCreateRequest(request);
 
         // --------------------------------------------------------
-        // STORE ID VALIDATION
+        // GET LOGGED-IN USER
         // --------------------------------------------------------
 
-        if (request.getStoreId() == null
-                || request.getStoreId()
-                        .trim()
-                        .isEmpty()) {
-
-            throw new IllegalArgumentException(
-                    "Store ID is required");
-        }
-
-
-        // --------------------------------------------------------
-        // PRODUCT SUB CATEGORY VALIDATION
-        // --------------------------------------------------------
-
-        if (request.getProductSubCategory() == null) {
-
-            throw new IllegalArgumentException(
-                    "Product sub category is required");
-        }
-
-
-        // --------------------------------------------------------
-        // PRODUCT CATEGORY VALIDATION
-        // --------------------------------------------------------
-
-        if (request.getProductCategory() != null
-                && !request.getProductCategory()
-                        .trim()
-                        .isEmpty()) {
-
-            if (!"Plumbing".equalsIgnoreCase(
-                    request.getProductCategory().trim())) {
-
-                throw new IllegalArgumentException(
-                        "Invalid product category. "
-                                + "Expected Plumbing");
-            }
-        }
-
-
-        // --------------------------------------------------------
-        // SKU VALIDATION
-        // --------------------------------------------------------
-
-        String sku =
-                request.getProductSubCategory()
-                        .getSku();
-
-        if (sku == null
-                || sku.trim().isEmpty()) {
-
-            throw new IllegalArgumentException(
-                    "SKU is required");
-        }
-
-
-        // --------------------------------------------------------
-        // PRODUCT NAME VALIDATION
-        // --------------------------------------------------------
-
-        String productName =
-                request.getProductSubCategory()
-                        .getProductName();
-
-        if (productName == null
-                || productName.trim().isEmpty()) {
-
-            throw new IllegalArgumentException(
-                    "Product name is required");
-        }
-
-
-        // --------------------------------------------------------
-        // CLEAN VALUES
-        // --------------------------------------------------------
-
-        String storeId =
-                request.getStoreId().trim();
-
-        sku = sku.trim();
-
-        productName =
-                productName.trim();
-
-
-        // --------------------------------------------------------
-        // GET AUTHENTICATED MATERIAL SUPPLIER
-        // --------------------------------------------------------
+        MaterialSupplierQuotationUser loggedInUser =
+                getLoggedInMSUser();
 
         String userId =
-                getLoggedInMaterialSupplierUserId();
+                loggedInUser.getBodSeqNo();
 
+        String updatedBy =
+                loggedInUser.getBodSeqNo();
 
         // --------------------------------------------------------
-        // GET SUPPLIER'S STORE
+        // FIND STORE
         // --------------------------------------------------------
 
         StoreMaster store =
-                getSupplierStore(
-                        storeId,
-                        userId);
-
+                storeMasterRepository
+                        .findById(request.getStoreId())
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Store not found with storeId: "
+                                                + request.getStoreId()));
 
         // --------------------------------------------------------
-        // CREATE PRIMARY KEY
-        //
-        // userId_storeId_sku
+        // PRODUCT DETAILS
+        // --------------------------------------------------------
+
+        PlumbingMasterRequest.ProductSubCategory product =
+                request.getProductSubCategory();
+
+        // --------------------------------------------------------
+        // CREATE UNIQUE ID
         //
         // Example:
         //
-        // MS123_1_70011505
+        // MS2026091611171674_1_70011505
         // --------------------------------------------------------
 
         String userIdStoreIdSku =
                 userId
                         + "_"
-                        + storeId
+                        + request.getStoreId()
                         + "_"
-                        + sku;
-
+                        + product.getSku();
 
         // --------------------------------------------------------
-        // DUPLICATE CHECK
+        // CHECK DUPLICATE
         // --------------------------------------------------------
 
         if (plumbingMasterRepository
-                .existsByUserIdStoreIdSku(
-                        userIdStoreIdSku)) {
+                .existsById(userIdStoreIdSku)) {
 
-            throw new IllegalArgumentException(
-                    "Plumbing product already exists: "
+            throw new RuntimeException(
+                    "Plumbing master already exists with ID: "
                             + userIdStoreIdSku);
         }
 
+        // --------------------------------------------------------
+        // CURRENT DATE TIME
+        // --------------------------------------------------------
+
+        LocalDateTime now =
+                LocalDateTime.now();
 
         // --------------------------------------------------------
-        // CREATE ENTITY
+        // BUILD ENTITY
         // --------------------------------------------------------
 
         PlumbingMaster plumbingMaster =
-                new PlumbingMaster();
+                PlumbingMaster.builder()
+                        .userIdStoreIdSku(
+                                userIdStoreIdSku)
 
+                        .productCategory(
+                                request.getProductCategory())
 
-        // --------------------------------------------------------
-        // PRIMARY KEY
-        // --------------------------------------------------------
+                        .sku(
+                                product.getSku())
 
-        plumbingMaster.setUserIdStoreIdSku(
-                userIdStoreIdSku);
+                        .productName(
+                                product.getProductName())
 
+                        .productDescription(
+                                product.getProductDescription())
 
-        // --------------------------------------------------------
-        // PRODUCT CATEGORY
-        // --------------------------------------------------------
+                        .dimensions(
+                                product.getDimensions())
 
-        plumbingMaster.setProductCategory(
-                "Plumbing");
+                        .store(store)
 
+                        .updatedBy(
+                                updatedBy)
 
-        // --------------------------------------------------------
-        // SKU
-        // --------------------------------------------------------
+                        .updatedDate(
+                                now)
 
-        plumbingMaster.setSku(
-                sku);
-
-
-        // --------------------------------------------------------
-        // PRODUCT NAME
-        // --------------------------------------------------------
-
-        plumbingMaster.setProductName(
-                productName);
-
-
-        // --------------------------------------------------------
-        // PRODUCT DESCRIPTION
-        // --------------------------------------------------------
-
-        String productDescription =
-                request.getProductSubCategory()
-                        .getProductDescription();
-
-        if (productDescription != null) {
-
-            plumbingMaster.setProductDescription(
-                    productDescription.trim());
-        }
-
-
-        // --------------------------------------------------------
-        // DIMENSIONS
-        // --------------------------------------------------------
-
-        String dimensions =
-                request.getProductSubCategory()
-                        .getDimensions();
-
-        if (dimensions != null) {
-
-            plumbingMaster.setDimensions(
-                    dimensions.trim());
-        }
-
-
-        // --------------------------------------------------------
-        // STORE RELATIONSHIP
-        //
-        // Entity has:
-        //
-        // StoreMaster store
-        //
-        // NOT:
-        //
-        // String storeId
-        // --------------------------------------------------------
-
-        plumbingMaster.setStore(store);
-
-
-        // --------------------------------------------------------
-        // AUDIT
-        // --------------------------------------------------------
-
-        plumbingMaster.setUpdatedBy(
-                userId);
-
-        plumbingMaster.setUpdatedDate(
-                LocalDateTime.now());
-
+                        .build();
 
         // --------------------------------------------------------
         // SAVE
@@ -421,217 +153,119 @@ public class PlumbingMasterServiceImpl
                 plumbingMasterRepository.save(
                         plumbingMaster);
 
+        // --------------------------------------------------------
+        // RESPONSE
+        // --------------------------------------------------------
 
         return convertToResponse(saved);
     }
 
-
     // ============================================================
-    // GET FOR LOGGED-IN MATERIAL SUPPLIER
-    //
-    // GET /api/plumbing-master
+    // GET BY ID
     // ============================================================
 
     @Override
     @Transactional(readOnly = true)
-    public PlumbingMasterResponse getForMs(
-            String storeId,
-            String updatedBy,
-            String productCategory,
-            String productSubCategory) {
+    public PlumbingMasterResponse getById(
+            String userIdStoreIdSku) {
 
-        // --------------------------------------------------------
-        // GET AUTHENTICATED SUPPLIER
-        // --------------------------------------------------------
+        PlumbingMaster plumbingMaster =
+                plumbingMasterRepository
+                        .findById(userIdStoreIdSku)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Plumbing master not found with ID: "
+                                                + userIdStoreIdSku));
 
-        String userId =
-                getLoggedInMaterialSupplierUserId();
-
-
-        // --------------------------------------------------------
-        // NEVER TRUST updatedBy FROM REQUEST
-        // --------------------------------------------------------
-
-        List<PlumbingMaster> records;
-
-
-        // --------------------------------------------------------
-        // STORE FILTER
-        // --------------------------------------------------------
-
-        if (storeId != null
-                && !storeId.trim().isEmpty()) {
-
-            records =
-                    plumbingMasterRepository
-                            .findByStore_StoreIdAndUpdatedBy(
-                                    storeId.trim(),
-                                    userId);
-
-        } else {
-
-            records =
-                    plumbingMasterRepository
-                            .findByUpdatedBy(
-                                    userId);
-        }
-
-
-        // --------------------------------------------------------
-        // PRODUCT CATEGORY VALIDATION
-        // --------------------------------------------------------
-
-        if (productCategory != null
-                && !productCategory.trim().isEmpty()) {
-
-            if (!"Plumbing".equalsIgnoreCase(
-                    productCategory.trim())) {
-
-                throw new IllegalArgumentException(
-                        "Invalid product category. "
-                                + "Expected Plumbing");
-            }
-        }
-
-
-        // --------------------------------------------------------
-        // PRODUCT SUB CATEGORY
-        //
-        // There is no separate productSubCategory column
-        // in PlumbingMaster.
-        //
-        // The nested object contains:
-        // SKU
-        // productName
-        // productDescription
-        // dimensions
-        //
-        // Therefore no separate DB filter is applied here.
-        // --------------------------------------------------------
-
-
-        // --------------------------------------------------------
-        // NO DATA
-        // --------------------------------------------------------
-
-        if (records == null
-                || records.isEmpty()) {
-
-            throw new IllegalArgumentException(
-                    "No plumbing products found");
-        }
-
-
-        /*
-         * IMPORTANT:
-         *
-         * PlumbingMasterResponse currently contains:
-         *
-         * ProductSubCategory productSubCategory;
-         *
-         * NOT:
-         *
-         * List<ProductSubCategory>
-         *
-         * Therefore this response can represent only ONE
-         * product.
-         *
-         * If storeId is supplied, returning the first record
-         * is normally the expected single-product response.
-         */
-
-        return convertToResponse(
-                records.get(0));
+        return convertToResponse(plumbingMaster);
     }
 
-
     // ============================================================
-    // UPDATE PLUMBING MASTER
-    //
-    // PUT
-    // ONLY MS
+    // GET BY STORE ID
     // ============================================================
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
+    public List<PlumbingMasterResponse> getByStoreId(
+            String storeId) {
+
+        List<PlumbingMaster> list =
+                plumbingMasterRepository
+                        .findByStore_StoreId(storeId);
+
+        return list.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    // ============================================================
+    // GET ALL
+    // ============================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PlumbingMasterResponse> getAll() {
+
+        List<PlumbingMaster> list =
+                plumbingMasterRepository.findAll();
+
+        return list.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    // ============================================================
+    // UPDATE
+    //
+    // PARTIAL UPDATE
+    //
+    // Only fields present in request will be updated.
+    //
+    // Example:
+    //
+    // {
+    //     "storeId": "1"
+    // }
+    //
+    // Only store will be updated.
+    // ============================================================
+
+    @Override
     public PlumbingMasterResponse update(
             String userIdStoreIdSku,
             PlumbingMasterRequest request) {
 
         // --------------------------------------------------------
-        // PRIMARY KEY VALIDATION
-        // --------------------------------------------------------
-
-        if (userIdStoreIdSku == null
-                || userIdStoreIdSku
-                        .trim()
-                        .isEmpty()) {
-
-            throw new IllegalArgumentException(
-                    "userIdStoreIdSku is required");
-        }
-
-
-        // --------------------------------------------------------
-        // REQUEST VALIDATION
+        // REQUEST CANNOT BE NULL
         // --------------------------------------------------------
 
         if (request == null) {
 
-            throw new IllegalArgumentException(
+            throw new RuntimeException(
                     "Request cannot be null");
         }
-
-
-        // --------------------------------------------------------
-        // PRODUCT SUB CATEGORY
-        // --------------------------------------------------------
-
-        if (request.getProductSubCategory() == null) {
-
-            throw new IllegalArgumentException(
-                    "Product sub category is required");
-        }
-
-
-        // --------------------------------------------------------
-        // GET AUTHENTICATED SUPPLIER
-        // --------------------------------------------------------
-
-        String userId =
-                getLoggedInMaterialSupplierUserId();
-
 
         // --------------------------------------------------------
         // FIND EXISTING RECORD
         // --------------------------------------------------------
 
-        PlumbingMaster existing =
+        PlumbingMaster plumbingMaster =
                 plumbingMasterRepository
-                        .findByUserIdStoreIdSku(
-                                userIdStoreIdSku.trim())
+                        .findById(userIdStoreIdSku)
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Plumbing product not found: "
+                                new RuntimeException(
+                                        "Plumbing master not found with ID: "
                                                 + userIdStoreIdSku));
 
-
         // --------------------------------------------------------
-        // OWNERSHIP CHECK
+        // GET LOGGED-IN USER
         // --------------------------------------------------------
 
-        if (existing.getUpdatedBy() == null
-                || !existing.getUpdatedBy()
-                        .equals(userId)) {
-
-            throw new IllegalArgumentException(
-                    "You are not authorized to update "
-                            + "this plumbing product");
-        }
-
+        MaterialSupplierQuotationUser loggedInUser =
+                getLoggedInMSUser();
 
         // ========================================================
-        // STORE ID
+        // UPDATE STORE
         // ========================================================
 
         if (request.getStoreId() != null
@@ -639,146 +273,99 @@ public class PlumbingMasterServiceImpl
                         .trim()
                         .isEmpty()) {
 
-            String newStoreId =
-                    request.getStoreId().trim();
+            StoreMaster store =
+                    storeMasterRepository
+                            .findById(request.getStoreId())
+                            .orElseThrow(() ->
+                                    new RuntimeException(
+                                            "Store not found with storeId: "
+                                                    + request.getStoreId()));
 
+            plumbingMaster.setStore(store);
+        }
 
-            String existingStoreId = null;
+        // ========================================================
+        // UPDATE PRODUCT CATEGORY
+        // ========================================================
 
-            if (existing.getStore() != null) {
+        if (request.getProductCategory() != null
+                && !request.getProductCategory()
+                        .trim()
+                        .isEmpty()) {
 
-                existingStoreId =
-                        existing.getStore()
-                                .getStoreId();
+            plumbingMaster.setProductCategory(
+                    request.getProductCategory());
+        }
+
+        // ========================================================
+        // UPDATE PRODUCT SUB CATEGORY
+        // ========================================================
+
+        if (request.getProductSubCategory() != null) {
+
+            PlumbingMasterRequest.ProductSubCategory product =
+                    request.getProductSubCategory();
+
+            // ----------------------------------------------------
+            // SKU
+            // ----------------------------------------------------
+
+            if (product.getSku() != null
+                    && !product.getSku()
+                            .trim()
+                            .isEmpty()) {
+
+                plumbingMaster.setSku(
+                        product.getSku());
             }
 
+            // ----------------------------------------------------
+            // PRODUCT NAME
+            // ----------------------------------------------------
 
-            if (existingStoreId == null) {
+            if (product.getProductName() != null
+                    && !product.getProductName()
+                            .trim()
+                            .isEmpty()) {
 
-                throw new IllegalArgumentException(
-                        "Existing plumbing product has no store");
+                plumbingMaster.setProductName(
+                        product.getProductName());
             }
 
+            // ----------------------------------------------------
+            // PRODUCT DESCRIPTION
+            // ----------------------------------------------------
 
-            /*
-             * Store ID is part of:
-             *
-             * userId_storeId_sku
-             *
-             * So it cannot be changed.
-             */
+            if (product.getProductDescription() != null) {
 
-            if (!newStoreId.equals(
-                    existingStoreId)) {
-
-                throw new IllegalArgumentException(
-                        "Store ID cannot be changed because "
-                                + "it is part of userIdStoreIdSku");
+                plumbingMaster.setProductDescription(
+                        product.getProductDescription());
             }
-        }
 
+            // ----------------------------------------------------
+            // DIMENSIONS
+            // ----------------------------------------------------
 
-        // ========================================================
-        // SKU
-        // ========================================================
+            if (product.getDimensions() != null) {
 
-        String requestSku =
-                request.getProductSubCategory()
-                        .getSku();
-
-
-        if (requestSku != null
-                && !requestSku.trim().isEmpty()) {
-
-            requestSku =
-                    requestSku.trim();
-
-
-            /*
-             * SKU is part of:
-             *
-             * userId_storeId_sku
-             *
-             * So it cannot be changed.
-             */
-
-            if (!requestSku.equals(
-                    existing.getSku())) {
-
-                throw new IllegalArgumentException(
-                        "SKU cannot be changed because "
-                                + "it is part of userIdStoreIdSku");
+                plumbingMaster.setDimensions(
+                        product.getDimensions());
             }
         }
 
-
         // ========================================================
-        // PRODUCT NAME
-        // ========================================================
-
-        String productName =
-                request.getProductSubCategory()
-                        .getProductName();
-
-
-        if (productName != null
-                && !productName.trim().isEmpty()) {
-
-            existing.setProductName(
-                    productName.trim());
-        }
-
-
-        // ========================================================
-        // PRODUCT DESCRIPTION
+        // UPDATED BY
         // ========================================================
 
-        String productDescription =
-                request.getProductSubCategory()
-                        .getProductDescription();
-
-
-        if (productDescription != null) {
-
-            existing.setProductDescription(
-                    productDescription.trim());
-        }
-
+        plumbingMaster.setUpdatedBy(
+                loggedInUser.getBodSeqNo());
 
         // ========================================================
-        // DIMENSIONS
+        // UPDATED DATE
         // ========================================================
 
-        String dimensions =
-                request.getProductSubCategory()
-                        .getDimensions();
-
-
-        if (dimensions != null) {
-
-            existing.setDimensions(
-                    dimensions.trim());
-        }
-
-
-        // ========================================================
-        // CATEGORY
-        // ========================================================
-
-        existing.setProductCategory(
-                "Plumbing");
-
-
-        // ========================================================
-        // AUDIT
-        // ========================================================
-
-        existing.setUpdatedBy(
-                userId);
-
-        existing.setUpdatedDate(
+        plumbingMaster.setUpdatedDate(
                 LocalDateTime.now());
-
 
         // ========================================================
         // SAVE
@@ -786,48 +373,134 @@ public class PlumbingMasterServiceImpl
 
         PlumbingMaster updated =
                 plumbingMasterRepository.save(
-                        existing);
+                        plumbingMaster);
 
+        // ========================================================
+        // RESPONSE
+        // ========================================================
 
         return convertToResponse(updated);
     }
 
-
     // ============================================================
-    // GET FOR ALL USERS
+    // CREATE VALIDATION
     //
-    // GET /api/plumbing-master/all
+    // IMPORTANT:
+    // This validation is ONLY for CREATE.
+    //
+    // UPDATE DOES NOT USE THIS VALIDATION.
     // ============================================================
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<PlumbingMasterResponse> getForAll() {
+    private void validateCreateRequest(
+            PlumbingMasterRequest request) {
 
-        List<PlumbingMaster> records =
-                plumbingMasterRepository.findAll();
+        if (request == null) {
 
-
-        List<PlumbingMasterResponse> response =
-                new ArrayList<>();
-
-
-        if (records == null
-                || records.isEmpty()) {
-
-            return response;
+            throw new RuntimeException(
+                    "Request cannot be null");
         }
 
+        // --------------------------------------------------------
+        // STORE ID
+        // --------------------------------------------------------
 
-        for (PlumbingMaster entity : records) {
+        if (request.getStoreId() == null
+                || request.getStoreId()
+                        .trim()
+                        .isEmpty()) {
 
-            response.add(
-                    convertToResponse(entity));
+            throw new RuntimeException(
+                    "storeId is required");
         }
 
+        // --------------------------------------------------------
+        // PRODUCT CATEGORY
+        // --------------------------------------------------------
 
-        return response;
+        if (request.getProductCategory() == null
+                || request.getProductCategory()
+                        .trim()
+                        .isEmpty()) {
+
+            throw new RuntimeException(
+                    "productCategory is required");
+        }
+
+        // --------------------------------------------------------
+        // PRODUCT SUB CATEGORY
+        // --------------------------------------------------------
+
+        if (request.getProductSubCategory() == null) {
+
+            throw new RuntimeException(
+                    "productSubCategory is required");
+        }
+
+        // --------------------------------------------------------
+        // SKU
+        // --------------------------------------------------------
+
+        if (request.getProductSubCategory()
+                        .getSku() == null
+                || request.getProductSubCategory()
+                        .getSku()
+                        .trim()
+                        .isEmpty()) {
+
+            throw new RuntimeException(
+                    "SKU is required");
+        }
+
+        // --------------------------------------------------------
+        // PRODUCT NAME
+        // --------------------------------------------------------
+
+        if (request.getProductSubCategory()
+                        .getProductName() == null
+                || request.getProductSubCategory()
+                        .getProductName()
+                        .trim()
+                        .isEmpty()) {
+
+            throw new RuntimeException(
+                    "productName is required");
+        }
     }
 
+    // ============================================================
+    // GET LOGGED-IN MS USER
+    // ============================================================
+
+    private MaterialSupplierQuotationUser getLoggedInMSUser() {
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        if (authentication == null
+                || !authentication.isAuthenticated()) {
+
+            throw new RuntimeException(
+                    "User is not authenticated");
+        }
+
+        Object principal =
+                authentication.getPrincipal();
+
+        // --------------------------------------------------------
+        // CHECK PRINCIPAL TYPE
+        // --------------------------------------------------------
+
+        if (!(principal
+                instanceof MaterialSupplierQuotationUser)) {
+
+            throw new RuntimeException(
+                    "Logged-in user is not a Material Supplier user");
+        }
+
+        return (MaterialSupplierQuotationUser) principal;
+    }
 
     // ============================================================
     // ENTITY -> RESPONSE
@@ -836,82 +509,64 @@ public class PlumbingMasterServiceImpl
     private PlumbingMasterResponse convertToResponse(
             PlumbingMaster entity) {
 
-        PlumbingMasterResponse response =
-                new PlumbingMasterResponse();
+        PlumbingMasterResponse.ProductSubCategory product =
+                PlumbingMasterResponse.ProductSubCategory
+                        .builder()
 
+                        .sku(
+                                entity.getSku())
 
-        // --------------------------------------------------------
-        // PRIMARY KEY
-        // --------------------------------------------------------
+                        .productName(
+                                entity.getProductName())
 
-        response.setUserIdStoreIdSku(
-                entity.getUserIdStoreIdSku());
+                        .productDescription(
+                                entity.getProductDescription())
 
+                        .dimensions(
+                                entity.getDimensions())
 
-        // --------------------------------------------------------
-        // STORE ID
-        // --------------------------------------------------------
+                        .build();
 
-        if (entity.getStore() != null) {
+        return PlumbingMasterResponse.builder()
 
-            response.setStoreId(
-                    entity.getStore()
-                            .getStoreId());
-        }
+                // ------------------------------------------------
+                // PRIMARY KEY
+                // ------------------------------------------------
 
+                .userIdStoreIdSku(
+                        entity.getUserIdStoreIdSku())
 
-        // --------------------------------------------------------
-        // PRODUCT CATEGORY
-        // --------------------------------------------------------
+                // ------------------------------------------------
+                // STORE
+                // ------------------------------------------------
 
-        response.setProductCategory(
-                entity.getProductCategory());
+                .storeId(
+                        entity.getStore().getStoreId())
 
+                // ------------------------------------------------
+                // PRODUCT CATEGORY
+                // ------------------------------------------------
 
-        // --------------------------------------------------------
-        // PRODUCT SUB CATEGORY
-        //
-        // Response DTO contains ONE object.
-        // --------------------------------------------------------
+                .productCategory(
+                        entity.getProductCategory())
 
-        PlumbingMasterResponse.ProductSubCategory
-                subCategory =
-                new PlumbingMasterResponse
-                        .ProductSubCategory();
+                // ------------------------------------------------
+                // PRODUCT SUB CATEGORY
+                // ------------------------------------------------
 
+                .productSubCategory(
+                        product)
 
-        subCategory.setSku(
-                entity.getSku());
+                // ------------------------------------------------
+                // AUDIT
+                // ------------------------------------------------
 
+                .updatedBy(
+                        entity.getUpdatedBy())
 
-        subCategory.setProductName(
-                entity.getProductName());
+                .updatedDate(
+                        entity.getUpdatedDate())
 
-
-        subCategory.setProductDescription(
-                entity.getProductDescription());
-
-
-        subCategory.setDimensions(
-                entity.getDimensions());
-
-
-        response.setProductSubCategory(
-                subCategory);
-
-
-        // --------------------------------------------------------
-        // AUDIT
-        // --------------------------------------------------------
-
-        response.setUpdatedBy(
-                entity.getUpdatedBy());
-
-
-        response.setUpdatedDate(
-                entity.getUpdatedDate());
-
-
-        return response;
+                .build();
     }
 }
