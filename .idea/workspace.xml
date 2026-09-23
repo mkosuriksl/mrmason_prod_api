@@ -30,6 +30,7 @@
       <change beforePath="$PROJECT_DIR$/mrmason/mrmason/src/main/resources/application-dev.properties" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/mrmason/src/main/resources/application-dev.properties" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/mrmason/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/mrmason/src/main/resources/application.properties" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/controller/AdminMaterialMasterController.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/controller/AdminMaterialMasterController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/controller/CxQuotationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/controller/CxQuotationController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/controller/MaterialSupplierController.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/controller/MaterialSupplierController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/controller/QuotationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/controller/QuotationController.java" afterDir="false" />
@@ -42,6 +43,7 @@
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/entity/QuotationEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/entity/QuotationEntity.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/entity/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/entity/User.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/entity/UserType.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/entity/UserType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/repository/AdminMaterialMasterRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/repository/AdminMaterialMasterRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/repository/CustomerRegistrationRepo.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/repository/CustomerRegistrationRepo.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/repository/UserDAO.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/repository/UserDAO.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/security/AuthDetailsProvider.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/security/AuthDetailsProvider.java" afterDir="false" />
@@ -49,10 +51,12 @@
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/security/JwtService.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/security/JwtService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/security/PasswordEncoder.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/security/SecurityPasswordEncoderConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/security/WebConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/security/WebConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/AdminMaterialMasterService.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/AdminMaterialMasterService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/CxQuotationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/CxQuotationService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/QuotationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/QuotationService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/SiteMeasurementService.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/SiteMeasurementService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/impl/AdminDetailsServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/impl/AdminDetailsServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/impl/AdminMaterialMasterServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/impl/AdminMaterialMasterServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/impl/CMaterialReqHeaderDetailsServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/impl/CMaterialReqHeaderDetailsServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/impl/CustomUserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/impl/CustomUserService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/impl/CxQuotationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/impl/CxQuotationServiceImpl.java" afterDir="false" />
@@ -71,7 +75,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="2192" />
+    <option name="cachedIndexableFilesCount" value="2203" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -112,61 +116,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="8.126168641676523E-143" />
-      <entry key="S2" value="1.276375902999779E-35" />
-      <entry key="S5" value="5.76132857906486E-14" />
-      <entry key="S10" value="1.4696337443432164E-6" />
-      <entry key="S30" value="0.21763881195136126" />
-      <entry key="S60" value="4.899079543416856" />
-      <entry key="M2" value="23.911752683291684" />
-      <entry key="M5" value="63.09204900857376" />
-      <entry key="M10" value="89.66873921351471" />
-      <entry key="M15" value="103.56794975884738" />
-      <entry key="M30" value="129.0532576509864" />
-      <entry key="H1" value="161.31080279365204" />
-      <entry key="H2" value="199.01910348964392" />
-      <entry key="H4" value="258.48635161688634" />
-      <entry key="D1" value="1002.4995000782432" />
-      <entry key="W1" value="2450.9976059601563" />
+      <entry key="MS100" value="6.762156103562553E-35" />
+      <entry key="MS500" value="1.465605339115358E-7" />
+      <entry key="S2" value="0.019566099810518822" />
+      <entry key="S5" value="0.20748866849544984" />
+      <entry key="S10" value="0.4742227689576179" />
+      <entry key="S30" value="1.190004909447447" />
+      <entry key="S60" value="1.7950570636967529" />
+      <entry key="M2" value="2.3852133523874484" />
+      <entry key="M5" value="4.181350066395872" />
+      <entry key="M10" value="7.816547259230374" />
+      <entry key="M15" value="12.112654703149897" />
+      <entry key="M30" value="30.088101134374416" />
+      <entry key="H1" value="76.19577536077284" />
+      <entry key="H2" value="178.49208202554624" />
+      <entry key="H4" value="362.548769444923" />
+      <entry key="D1" value="1355.7511305072178" />
+      <entry key="W1" value="3011.544590826894" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="1.0" />
-      <entry key="MS500" value="1.0" />
-      <entry key="S2" value="1.0" />
-      <entry key="S5" value="1.000000000000018" />
-      <entry key="S10" value="1.0000001915596415" />
-      <entry key="S30" value="1.010694599352951" />
-      <entry key="S60" value="1.1750372468751893" />
-      <entry key="M2" value="1.732746417236867" />
-      <entry key="M5" value="3.2717952547563725" />
-      <entry key="M10" value="6.4586683083346" />
-      <entry key="M15" value="10.965980548038099" />
-      <entry key="M30" value="27.97650713208077" />
-      <entry key="H1" value="58.370181330141996" />
-      <entry key="H2" value="95.9036492831525" />
-      <entry key="H4" value="141.47889938003473" />
-      <entry key="D1" value="447.5208355397798" />
-      <entry key="W1" value="896.7969765161324" />
+      <entry key="MS100" value="1.000000000000556" />
+      <entry key="MS500" value="1.0035401030042221" />
+      <entry key="S2" value="1.255834585866832" />
+      <entry key="S5" value="1.7918091890862955" />
+      <entry key="S10" value="2.531399538922596" />
+      <entry key="S30" value="4.313963946770302" />
+      <entry key="S60" value="5.362200820277578" />
+      <entry key="M2" value="6.146128520837856" />
+      <entry key="M5" value="8.147186109557161" />
+      <entry key="M10" value="13.781743147612005" />
+      <entry key="M15" value="20.11625188328801" />
+      <entry key="M30" value="40.129224685281045" />
+      <entry key="H1" value="80.49617314960639" />
+      <entry key="H2" value="149.8739824718496" />
+      <entry key="H4" value="253.66669497952702" />
+      <entry key="D1" value="699.7903856560299" />
+      <entry key="W1" value="1248.1666266753527" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.0021225290283712066" />
-      <entry key="MS500" value="0.29199184865327943" />
-      <entry key="S2" value="0.7350936681945205" />
-      <entry key="S5" value="0.8841726417921271" />
-      <entry key="S10" value="0.9403061982978672" />
-      <entry key="S30" value="1.2078083505916657" />
-      <entry key="S60" value="6.061964450110222" />
-      <entry key="M2" value="25.634778309083806" />
-      <entry key="M5" value="66.35193248173725" />
-      <entry key="M10" value="96.10987230341078" />
-      <entry key="M15" value="114.51125880877018" />
-      <entry key="M30" value="156.99705259200672" />
-      <entry key="H1" value="219.6448999497611" />
-      <entry key="H2" value="294.8925171396412" />
-      <entry key="H4" value="399.9431473328162" />
-      <entry key="D1" value="1450.0085172141828" />
-      <entry key="W1" value="3347.790949787058" />
+      <entry key="MS100" value="3.0813358575682865E-12" />
+      <entry key="MS500" value="0.005963607177214005" />
+      <entry key="S2" value="0.463701979412756" />
+      <entry key="S5" value="1.4552607909896123" />
+      <entry key="S10" value="2.6254218115290104" />
+      <entry key="S30" value="5.302313002799569" />
+      <entry key="S60" value="7.034646136634645" />
+      <entry key="M2" value="8.46087791572418" />
+      <entry key="M5" value="12.285041053446447" />
+      <entry key="M10" value="21.553913188656303" />
+      <entry key="M15" value="32.182394130723274" />
+      <entry key="M30" value="70.16770139735164" />
+      <entry key="H1" value="156.64114373823682" />
+      <entry key="H2" value="328.31794872635714" />
+      <entry key="H4" value="616.173998282255" />
+      <entry key="D1" value="2055.52235666604" />
+      <entry key="W1" value="4259.706150935051" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -272,6 +276,26 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint type="java-method">
+          <url>file://$PROJECT_DIR$/mrmason/src/main/java/com/application/mrmason/service/impl/AdminRoleLineServiceImpl.java</url>
+          <line>105</line>
+          <properties class="com.application.mrmason.service.impl.AdminRoleLineServiceImpl" method="updateRoleLine">
+            <option name="EMULATED" value="true" />
+            <option name="WATCH_EXIT" value="false" />
+          </properties>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+    <pin-to-top-manager>
+      <pinned-members>
+        <PinnedItemInfo parentTag="com.application.mrmason.dto.AdminRoleLineRequestDto" memberName="roleId" />
+      </pinned-members>
+    </pin-to-top-manager>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

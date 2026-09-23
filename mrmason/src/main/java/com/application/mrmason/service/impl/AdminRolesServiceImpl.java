@@ -2,9 +2,11 @@ package com.application.mrmason.service.impl;
 
 import com.application.mrmason.dto.AdminRolesRequestDto;
 import com.application.mrmason.dto.AdminRolesResponseDto;
+import com.application.mrmason.dto.UpdateAdminRolesDto;
 import com.application.mrmason.entity.AdminDetails;
 import com.application.mrmason.entity.AdminRoles;
 import com.application.mrmason.entity.SuperAdmin;
+import com.application.mrmason.exceptions.ResourceNotFoundException;
 import com.application.mrmason.repository.AdminDetailsRepo;
 import com.application.mrmason.repository.AdminRolesRepository;
 import com.application.mrmason.repository.SuperAdminRepository;
@@ -14,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -89,36 +92,33 @@ public class AdminRolesServiceImpl implements AdminRolesServices {
     }
 
     @Override
-    public Optional<AdminRoles> updateAdminRoles(String roleName) {
+    public AdminRolesResponseDto updateAdminRoles(UpdateAdminRolesDto dto) throws AccessDeniedException {
 
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        String creatorId = resolveCreatorId(currentEmail);
 
-        String creatorId ;
-        SuperAdmin superAdmin = superAdminRepository.findBySuperAdminEmail(currentEmail).orElse(null);
-        if(superAdmin != null){
-            creatorId = superAdmin.getSuperAdminId();
-        }else {
-            AdminDetails admin = adminDetailsRepo.findByEmail(currentEmail);
-            if (admin != null) {
-                creatorId = admin.getAdminId();
-            } else {
-                throw new RuntimeException("No authorized user found with email: " + currentEmail);
-            }
+        AdminRoles existingRole = adminRolesRepository.findById(dto.getRoleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Admin role not found with name: " + dto.getRoleId()));
+
+        if(!creatorId.equals(existingRole.getUpdatedBy())){
+            throw new AccessDeniedException("Forbidden: You can only update roles that you created.");
         }
+        existingRole.setRoleName(dto.getRoleName());
+        existingRole.setUpdatedBy(creatorId);
 
-        Optional<AdminRoles> adminRoles = adminRolesRepository.findById(roleName);
-
-
-        if(adminRoles.isPresent()){
-            adminRoles.get().setRoleName(roleName);
-            adminRolesRepository.save(adminRoles.get());
-        }else{
-            throw new RuntimeException("No authorized user found with email: " + currentEmail);
-        }
-
-        return adminRoles;
+        AdminRoles savedRole = adminRolesRepository.save(existingRole);
+        return mapToDto(savedRole);
     }
 
+    private String resolveCreatorId(String email) {
+        return superAdminRepository.findBySuperAdminEmail(email)
+                .map(SuperAdmin::getSuperAdminId)
+                .orElseGet(() ->
+                        Optional.ofNullable(adminDetailsRepo.findByEmail(email))
+                                .map(AdminDetails::getAdminId)
+                                .orElseThrow(() -> new RuntimeException("No authorized user found with email: " + email))
+                );
+    }
     public AdminRolesResponseDto mapToDto(AdminRoles adminRoles) {
         return AdminRolesResponseDto.builder()
                 .roleId(adminRoles.getRoleId())

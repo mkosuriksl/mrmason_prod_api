@@ -70,19 +70,20 @@ public class CxQuotationServiceImpl implements CxQuotationService {
 
         List<CxQuotation> savedQuotations = cxQuotationRepository.saveAll(quotationsToSave);
 
-        CxQuotation firstQuotation = savedQuotations.get(0);
+        for(CxQuotation quotation : savedQuotations){
 
-        String subject = "Confirmed Quotation - " + uniqueId;
+        String subject = "Confirmed Quotation - " + quotation.getProductName();
         String body = String.format(
                 "Dear %s,<br><br>" +
                         "Your quotation for '%s' (Quantity: %s) has been successfully created." +
                         "<br><br>Thank You!",
                 customer.getCustomerName(),
-                firstQuotation.getProductName(),
-                savedQuotations.size());
+                quotation.getProductName(),
+                quotation.getQuantity(),
+                quotation.getRequestId());
 
         emailService.sendEmail(customer.getUserEmail(), subject, body);
-
+        }
         return mapToDtoList(savedQuotations);
     }
 

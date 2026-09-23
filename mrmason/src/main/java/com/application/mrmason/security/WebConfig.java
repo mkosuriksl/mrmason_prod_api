@@ -66,6 +66,9 @@ public class WebConfig {
 						"/getBhatServiceCategory","/getBhatServiceCategory/nonCivil/{serviceCategory}","/getBhatServiceCategory/civil/{serviceCategory}",
 						"/swagger-resources", "/swagger-resources/**", "/configuration/ui", "/configuration/security","/api/distinct-location-by-ms","/distinct-location-by-sp",
 						"/swagger-ui/**", "/webjars/**", "/swagger-ui.html", "/getRentalAssetsNoAuth","/getAdminUiEndPoint","/api/home-search-by-location","/api/home-search-by-machine",
+								"/admin-material-master/get_material_category",
+								"/admin-material-master/product_sku",
+								"/admin-material-master/get-product",
 								"api/super-admin/**").permitAll()
 						.requestMatchers("/api/quotation/get_all_quotation_info").hasAnyRole("MS", "Adm")
 						.requestMatchers("/api/admin-roles/create-role").hasAnyRole("SADM", "Adm")
