@@ -190,7 +190,6 @@ public class CxQuotationServiceImpl implements CxQuotationService {
             List<CxQuotationResponseDto.QuotationItem> itemDtos = items.stream()
                     .map(item -> CxQuotationResponseDto.QuotationItem.builder()
                             .id(item.getId())
-                            .requestId(item.getRequestId())
                             .productCategory(item.getProductCategory())
                             .productSubCategory(item.getProductSubCategory())
                             .brand(item.getBrand())
@@ -201,6 +200,7 @@ public class CxQuotationServiceImpl implements CxQuotationService {
                     .collect(Collectors.toList());
 
             return CxQuotationResponseDto.builder()
+                    .requestId(first.getRequestId())
                     .expectedDeliveryDate(first.getExpectedDeliveryDate())
                     .deliveryLocation(first.getDeliveryLocation())
                     .pincode(first.getPincode())

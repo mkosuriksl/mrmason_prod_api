@@ -15,6 +15,9 @@ import java.util.List;
 @AllArgsConstructor
 public class CxQuotationResponseDto {
 
+    @JsonProperty("request_id")
+    private String requestId;
+
     @JsonProperty("updated_by")
     private String updatedBy;
 
@@ -41,9 +44,6 @@ public class CxQuotationResponseDto {
 
         @JsonProperty("id")
         private Long id;
-
-        @JsonProperty("request_id")
-        private String requestId;
 
         @JsonProperty("product_category")
         private String productCategory;
