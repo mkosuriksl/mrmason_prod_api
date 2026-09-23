@@ -102,13 +102,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             throw new RuntimeException("Please verify your account first. Check your email for verification link..");
         }
 
-        log.info("--- DIAGNOSTIC CHECK ---");
-        log.info("Raw Password from Request: {}", dto.getPassword());
-        log.info("Password Hash from DB: {}", superAdmin.getPassword());
-
         boolean matches = passwordEncoder.matches(dto.getPassword(), superAdmin.getPassword());
-        log.info("Direct BCrypt Match Result: {}", matches);
-        log.info("------------------------");
 
         Authentication auth;
         try {
