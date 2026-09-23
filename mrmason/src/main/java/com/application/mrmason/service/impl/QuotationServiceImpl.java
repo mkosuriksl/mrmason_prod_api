@@ -1,19 +1,21 @@
 package com.application.mrmason.service.impl;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.application.mrmason.dto.QuotationResponseDto;
+import com.application.mrmason.entity.*;
+import com.application.mrmason.repository.CustomerRegistrationRepo;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
-import com.application.mrmason.entity.QuotationEntity;
-import com.application.mrmason.entity.SiteMeasurement;
-import com.application.mrmason.entity.User;
-import com.application.mrmason.entity.UserType;
 import com.application.mrmason.enums.RegSource;
 import com.application.mrmason.exceptions.ResourceNotFoundException;
 import com.application.mrmason.repository.QuotationRepository;
@@ -31,72 +33,40 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 
 @Service
+@RequiredArgsConstructor
 public class QuotationServiceImpl implements QuotationService {
-
-	@Autowired
-	private QuotationRepository repository;
 
 	@PersistenceContext
 	private EntityManager entityManager;
-
-	@Autowired
-	UserDAO userDAO;
-	
-    @Autowired
-    private SiteMeasurementRepository siteRepository;
+	private final QuotationRepository repository;
+	private final UserDAO userDAO;
+    private final SiteMeasurementRepository siteRepository;
+	private final CustomerRegistrationRepo customerRegistrationRepo;
 
 	@Override
-	public List<QuotationEntity> createQuotation(List<QuotationEntity> quotationEntity) {
-
-		if (quotationEntity == null || quotationEntity.isEmpty()) {
-			return List.of();
-		}
-
+	public QuotationEntity createQuotation(QuotationEntity quotationEntity,RegSource regSource) {
 		String loggedInUserEmail = AuthDetailsProvider.getLoggedEmail();
 		Collection<? extends GrantedAuthority> loggedInRole = AuthDetailsProvider.getLoggedRole();
-		System.out.println("ROLE" + loggedInUserEmail);
-
-		List<String> roleNames = (loggedInRole != null) ? loggedInRole.stream()
+		System.out.println("ROLE"+loggedInUserEmail);
+		List<String> roleNames = loggedInRole.stream()
 				.map(GrantedAuthority::getAuthority)
 				.map(role -> role.replace("ROLE_", "")) // Remove "ROLE_" prefix
-				.collect(Collectors.toList())
-				: List.of();
+				.collect(Collectors.toList());
 
-		if (roleNames.isEmpty()) {
-			throw new ResourceNotFoundException("Role Developer/Adm not permitted for quotation creation: " + roleNames);
-		}
-		if (roleNames.contains("Developer") || roleNames.contains("Adm")) {
+		if (roleNames.equals("Developer")||roleNames.equals("Adm")) {
 			throw new ResourceNotFoundException("Role Developer not found in: " + roleNames);
 		}
-		UserType userType;
-		try {
-			userType = UserType.valueOf(roleNames.get(0)); // Make sure roleNames is not empty
-		} catch (IllegalArgumentException e) {
-			throw new ResourceNotFoundException("Invalid UserType enum value: " + roleNames.get(0));
-		}
-
-		Date now = new Date();
-		for (QuotationEntity entity : quotationEntity) {
-			User user = userDAO.findByEmailAndUserTypeAndRegSource(
-							loggedInUserEmail, userType, entity.getRegSource())
-					.orElseThrow(() -> new ResourceNotFoundException("User not found for email: " + loggedInUserEmail
-							+ ", UserType: " + userType
-							+ ", RegSource: " + entity.getRegSource()));
-
-			SiteMeasurement siteMeasurement = siteRepository.findByServiceRequestId(entity.getReqId());
-			if (siteMeasurement == null) {
-				throw new ResourceNotFoundException("SiteMeasurement not found for Service Request ID: " + entity.getReqId());
-			}
-
-			entity.setUpdatedBy(user.getBodSeqNo());
-			entity.setReqId(siteMeasurement.getServiceRequestId());
-			entity.setUpdatedDate(now);
-			entity.setServicePersonId(user.getBodSeqNo());
-			entity.setRegSource(entity.getRegSource());
-			entity.setStatus("NEW");
-		}
-		return repository.saveAll(quotationEntity);
+		UserType userType = UserType.valueOf(roleNames.get(0)); // Make sure roleNames is not empty
+		User user = userDAO.findByEmailAndUserTypeAndRegSource(loggedInUserEmail, userType,regSource)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found: " + loggedInUserEmail));
+		quotationEntity.setUpdatedBy(user.getBodSeqNo());
+		SiteMeasurement siteMeasurement=siteRepository.findByServiceRequestId(quotationEntity.getReqId());
+		quotationEntity.setReqId(siteMeasurement.getServiceRequestId());
+		quotationEntity.setUpdatedDate(new Date());
+		quotationEntity.setServicePersonId(user.getBodSeqNo());
+		return repository.save(quotationEntity);
 	}
+
 
 	@Override
 	public QuotationEntity updateQuotation(QuotationEntity updatedQuotation,RegSource regSource) {
@@ -104,7 +74,7 @@ public class QuotationServiceImpl implements QuotationService {
 		Collection<? extends GrantedAuthority> loggedInRole = AuthDetailsProvider.getLoggedRole();
 		List<String> roleNames = loggedInRole.stream()
 				.map(GrantedAuthority::getAuthority)
-				.map(role -> role.replace("ROLE_", "")) // Remove "ROLE_" prefix
+				.map(role -> role.replace("ROLE_", ""))
 				.collect(Collectors.toList());
 
 		if (roleNames.equals("Developer")||roleNames.equals("Adm")) {
@@ -117,9 +87,10 @@ public class QuotationServiceImpl implements QuotationService {
 				.orElseThrow(() -> new EntityNotFoundException("Work assignment not found with recId: " + updatedQuotation.getReqId()));
 
 		existing.setUpdatedBy(user.getBodSeqNo());
-		existing.setUpdatedDate(new Date()); // Set current date/time
+		existing.setUpdatedDate(new Date());
 		existing.setStatus(updatedQuotation.getStatus());
 		existing.setQuotedAmount(updatedQuotation.getQuotedAmount());
+		existing.setRegSource(user.getRegSource());
 		return repository.save(existing);
 	}
 

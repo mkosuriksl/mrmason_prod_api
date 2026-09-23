@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -14,31 +15,13 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CxQuotationResponseDto {
 
-    @JsonProperty("Id")
-    private Long id;
+    @JsonProperty("updated_by")
+    private String updatedBy;
 
-    @JsonProperty("request_id")
-    private String requestId;
+    @JsonProperty("updated_date")
+    private LocalDateTime updatedDate;
 
-    @JsonProperty("product_category")
-    private String productCategory;
-
-    @JsonProperty("product_sub_category")
-    private String productSubCategory;
-
-    @JsonProperty("brand")
-    private String brand;
-
-    @JsonProperty("stock_keeping_unit")
-    private String stockKeepingUnit;
-
-    @JsonProperty("product_name")
-    private String productName;
-
-    @JsonProperty("quantity")
-    private String quantity;
-
-    @JsonProperty("expected_delievery_date")
+    @JsonProperty("expected_delivery_date")
     private String expectedDeliveryDate;
 
     @JsonProperty("delivery_location")
@@ -47,9 +30,38 @@ public class CxQuotationResponseDto {
     @JsonProperty("pincode")
     private String pincode;
 
-    @JsonProperty("updated_by")
-    private String updatedBy;
+    @JsonProperty("item_list")
+    private List<QuotationItem> itemList;
 
-    @JsonProperty("updated_date")
-    private LocalDateTime updatedDate;
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class QuotationItem {
+
+        @JsonProperty("id")
+        private Long id;
+
+        @JsonProperty("request_id")
+        private String requestId;
+
+        @JsonProperty("product_category")
+        private String productCategory;
+
+        @JsonProperty("product_sub_category")
+        private String productSubCategory;
+
+        @JsonProperty("brand")
+        private String brand;
+
+        @JsonProperty("stock_keeping_unit")
+        private String stockKeepingUnit;
+
+        @JsonProperty("product_name")
+        private String productName;
+
+        @JsonProperty("quantity")
+        private String quantity;
+
+    }
 }

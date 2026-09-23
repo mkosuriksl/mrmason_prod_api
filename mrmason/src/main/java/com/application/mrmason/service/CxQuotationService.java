@@ -8,11 +8,11 @@ import java.util.List;
 
 public interface CxQuotationService {
 
-    public List<CxQuotationResponseDto> createQuotation(List<CxQuotationRequestDto> dto);
+    List<CxQuotationResponseDto> createQuotation(List<CxQuotationRequestDto> dto);
 
-    public CxQuotationResponseDto updateQuotation(CxQuotationRequestDto dto);
+    CxQuotationResponseDto updateQuotation(CxQuotationRequestDto dto);
 
-    public List<CxQuotationResponseDto> getAllQuotation(String productCategory ,
+    List<CxQuotationResponseDto> getAllQuotation(String productCategory ,
                                                   String productSubCategory ,
                                                   String brand,
                                                   String stockKeepingUnit,

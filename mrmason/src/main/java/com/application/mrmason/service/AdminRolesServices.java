@@ -2,15 +2,20 @@ package com.application.mrmason.service;
 
 import com.application.mrmason.dto.AdminRolesRequestDto;
 import com.application.mrmason.dto.AdminRolesResponseDto;
+import com.application.mrmason.entity.AdminRoles;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Optional;
 
 
 public interface AdminRolesServices {
 
-    public AdminRolesResponseDto createAdminRoles(AdminRolesRequestDto requestDto);
+    AdminRolesResponseDto createAdminRoles(AdminRolesRequestDto requestDto);
+
+    List<AdminRolesResponseDto> findRolesByUpdatedBy();
+
+    Optional<AdminRoles> updateAdminRoles(String roleName);
 
 
-    public List<AdminRolesResponseDto> findRolesByUpdatedBy(String updatedBy);
 }

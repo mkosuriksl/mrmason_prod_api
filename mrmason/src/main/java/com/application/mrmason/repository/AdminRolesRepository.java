@@ -14,6 +14,6 @@ public interface AdminRolesRepository extends JpaRepository<AdminRoles, String> 
 
     Optional<AdminRoles> findById(String id);
 
-/*    @Query("SELECT ar FROM AdminRoles ar WHERE ar.updated=:updatedBy")
-    public List<AdminRoles> findRolesByUpdatedBy(@Param("updatedBy") String updatedBy );*/
+    @Query("SELECT ar FROM AdminRoles ar WHERE ar.updatedBy=:updatedBy")
+    public List<AdminRoles> findRolesByUpdatedBy(@Param("updatedBy") String updatedBy );
 }

@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -61,8 +63,60 @@ public class AdminRolesServiceImpl implements AdminRolesServices {
     }
 
     @Override
-    public List<AdminRolesResponseDto> findRolesByUpdatedBy(String updatedBy) {
-        return List.of();
+    public List<AdminRolesResponseDto> findRolesByUpdatedBy() {
+
+        String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        String creatorId ;
+        SuperAdmin superAdmin = superAdminRepository.findBySuperAdminEmail(currentEmail).orElse(null);
+        if(superAdmin != null){
+            creatorId = superAdmin.getSuperAdminId();
+        }else {
+            AdminDetails admin = adminDetailsRepo.findByEmail(currentEmail);
+            if (admin != null) {
+                creatorId = admin.getAdminId();
+            } else {
+                throw new RuntimeException("No authorized user found with email: " + currentEmail);
+            }
+        }
+            List<AdminRoles> adminRolesList = adminRolesRepository.findAll();
+
+            List<AdminRolesResponseDto> roles =  adminRolesList.stream()
+                    .filter(e -> e.getUpdatedBy().equals(creatorId))
+                    .map(this::mapToDto)
+                    .collect(Collectors.toList());
+        return roles;
+    }
+
+    @Override
+    public Optional<AdminRoles> updateAdminRoles(String roleName) {
+
+        String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        String creatorId ;
+        SuperAdmin superAdmin = superAdminRepository.findBySuperAdminEmail(currentEmail).orElse(null);
+        if(superAdmin != null){
+            creatorId = superAdmin.getSuperAdminId();
+        }else {
+            AdminDetails admin = adminDetailsRepo.findByEmail(currentEmail);
+            if (admin != null) {
+                creatorId = admin.getAdminId();
+            } else {
+                throw new RuntimeException("No authorized user found with email: " + currentEmail);
+            }
+        }
+
+        Optional<AdminRoles> adminRoles = adminRolesRepository.findById(roleName);
+
+
+        if(adminRoles.isPresent()){
+            adminRoles.get().setRoleName(roleName);
+            adminRolesRepository.save(adminRoles.get());
+        }else{
+            throw new RuntimeException("No authorized user found with email: " + currentEmail);
+        }
+
+        return adminRoles;
     }
 
     public AdminRolesResponseDto mapToDto(AdminRoles adminRoles) {

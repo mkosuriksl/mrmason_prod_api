@@ -19,7 +19,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,7 +33,6 @@ public class CxQuotationServiceImpl implements CxQuotationService {
     private final CxQuotationRepository cxQuotationRepository;
     private final CustomerRegistrationRepo customerRegistrationRepo;
     private final EmailServiceImpl emailService;
-
 
     @Override
     public List<CxQuotationResponseDto> createQuotation(List<CxQuotationRequestDto> dtoList) {
@@ -81,9 +83,7 @@ public class CxQuotationServiceImpl implements CxQuotationService {
 
         emailService.sendEmail(customer.getUserEmail(), subject, body);
 
-        return savedQuotations.stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+        return mapToDtoList(savedQuotations);
     }
 
     /*--------------------------------------Get my quotation (logged in user)----------------------------------------*/
@@ -100,9 +100,7 @@ public class CxQuotationServiceImpl implements CxQuotationService {
 
         List<CxQuotation> quotationList = cxQuotationRepository.findByUpdatedBy(customerId);
 
-        return quotationList.stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+        return mapToDtoList(quotationList);
     }
 
     /*-------------------------------------update my quotation (logged in user)-------------------------------------*/
@@ -137,7 +135,7 @@ public class CxQuotationServiceImpl implements CxQuotationService {
 
         CxQuotation updatedQuotation = cxQuotationRepository.save(quotation);
 
-        return mapToDto(updatedQuotation);
+        return mapToDtoList(Collections.singletonList(updatedQuotation)).get(0);
     }
 
     @Override
@@ -174,30 +172,42 @@ public class CxQuotationServiceImpl implements CxQuotationService {
             throw new RuntimeException("No quotations found for the given criteria");
         }
 
-        return quotationAllList.stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+        return mapToDtoList(quotationAllList);
     }
 
-
-    CxQuotationResponseDto mapToDto(CxQuotation cxQuotation) {
-        if (cxQuotation == null) {
-            return null;
+    private List<CxQuotationResponseDto> mapToDtoList(List<CxQuotation> quotations) {
+        if (quotations == null || quotations.isEmpty()) {
+            return Collections.emptyList();
         }
-        return CxQuotationResponseDto.builder()
-                .id(cxQuotation.getId())
-                .requestId(cxQuotation.getRequestId())
-                .productName(cxQuotation.getProductName())
-                .productCategory(cxQuotation.getProductCategory())
-                .productSubCategory(cxQuotation.getProductSubCategory())
-                .brand(cxQuotation.getBrand())
-                .stockKeepingUnit(cxQuotation.getStockKeepingUnit())
-                .quantity(cxQuotation.getQuantity())
-                .expectedDeliveryDate(cxQuotation.getExpectedDeliveryDate())
-                .deliveryLocation(cxQuotation.getDeliveryLocation())
-                .pincode(cxQuotation.getPincode())
-                .updatedBy(cxQuotation.getUpdatedBy())
-                .updatedDate(cxQuotation.getUpdatedDate())
-                .build();
+
+        Map<String, List<CxQuotation>> groupedByRequestId = quotations.stream()
+                .collect(Collectors.groupingBy(CxQuotation::getRequestId));
+
+        return groupedByRequestId.entrySet().stream().map(entry -> {
+            List<CxQuotation> items = entry.getValue();
+            CxQuotation first = items.get(0);
+
+            List<CxQuotationResponseDto.QuotationItem> itemDtos = items.stream()
+                    .map(item -> CxQuotationResponseDto.QuotationItem.builder()
+                            .id(item.getId())
+                            .requestId(item.getRequestId())
+                            .productCategory(item.getProductCategory())
+                            .productSubCategory(item.getProductSubCategory())
+                            .brand(item.getBrand())
+                            .stockKeepingUnit(item.getStockKeepingUnit())
+                            .productName(item.getProductName())
+                            .quantity(item.getQuantity())
+                            .build())
+                    .collect(Collectors.toList());
+
+            return CxQuotationResponseDto.builder()
+                    .expectedDeliveryDate(first.getExpectedDeliveryDate())
+                    .deliveryLocation(first.getDeliveryLocation())
+                    .pincode(first.getPincode())
+                    .updatedBy(first.getUpdatedBy())
+                    .updatedDate(first.getUpdatedDate())
+                    .itemList(itemDtos)
+                    .build();
+        }).collect(Collectors.toList());
     }
 }

@@ -10,10 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @Slf4j
@@ -56,6 +55,41 @@ public class AdminRolesController {
             log.error("Failed to create admin role: {}", ex.getMessage(), ex);
 
             GenericResponse<AdminRolesResponseDto> errorResponse = GenericResponse.<AdminRolesResponseDto>builder()
+                    .data(null)
+                    .success(false)
+                    .message("Unable to create admin role: " + ex.getMessage())
+                    .build();
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    @GetMapping("/get")
+    public ResponseEntity<GenericResponse<List<AdminRolesResponseDto>>> getRoles(){
+
+        try{
+        List<AdminRolesResponseDto> list = adminRolesServices.findRolesByUpdatedBy();
+            GenericResponse<List<AdminRolesResponseDto>> response = GenericResponse.<List<AdminRolesResponseDto>>builder()
+                    .data(list)
+                    .success(true)
+                    .message("Fetched admin roles list successfully")
+                    . build();
+            return  ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Invalid request parameters for role creation: {}", ex.getMessage());
+
+            GenericResponse<List<AdminRolesResponseDto>> errorResponse = GenericResponse.<List<AdminRolesResponseDto>>builder()
+                    .data(null)
+                    .success(false)
+                    .message("Invalid input: " + ex.getMessage())
+                    .build();
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+
+        } catch (Exception ex) {
+            log.error("Failed to create admin role: {}", ex.getMessage(), ex);
+
+            GenericResponse<List<AdminRolesResponseDto>> errorResponse = GenericResponse.<List<AdminRolesResponseDto>>builder()
                     .data(null)
                     .success(false)
                     .message("Unable to create admin role: " + ex.getMessage())

@@ -3,6 +3,9 @@ package com.application.mrmason.controller;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.application.mrmason.dto.QuotationResponseDto;
+import com.application.mrmason.exceptions.ResourceNotFoundException;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,26 +39,27 @@ public class QuotationController {
 	UserService userService;
 
 	@PostMapping("/add-quotation")
-	public ResponseEntity<ResponseQuotationtDTO> createQuotation(@RequestBody List<QuotationEntity> entity) {
-		ResponseQuotationtDTO response = new ResponseQuotationtDTO();
-		try {
-			List<QuotationEntity> savedquotationRequest = quotationService.createQuotation(entity);
-			if (savedquotationRequest != null && !savedquotationRequest.isEmpty()) {
-				response.setMessage("QuotationRequest added successfully");
-				response.setStatus(true);
-				response.setData(mapToDTOList(savedquotationRequest));
-				return ResponseEntity.ok(response);
-			}
-			response.setMessage("Failed to add site quotationRequest");
-			response.setStatus(false);
-			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-		} catch (Exception e) {
-			log.error("Error adding site quotationRequest: {}", e.getMessage());
-			response.setMessage(e.getMessage());
-			response.setStatus(false);
-			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
+    public ResponseEntity<ResponseQuotationtDTO> createQuotation(@RequestBody QuotationEntity entity,@RequestParam RegSource regSource) {
+        ResponseQuotationtDTO response = new ResponseQuotationtDTO();
+        try {
+            QuotationEntity savedquotationRequest = quotationService.createQuotation(entity,regSource);
+            if (savedquotationRequest != null) {
+                response.setMessage("QuotationRequest added successfully");
+                response.setStatus(true);
+                response.setData(mapToDTO(savedquotationRequest));
+                return ResponseEntity.ok(response);
+            }
+            response.setMessage("Failed to add site quotationRequest");
+            response.setStatus(false);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            log.error("Error adding site quotationRequest: {}", e.getMessage());
+            response.setMessage(e.getMessage());
+            response.setStatus(false);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 	private List<QuotationDTO> mapToDTOList(List<QuotationEntity> entities) {
 		return entities.stream()
 				.map(this::mapToDTO)
@@ -74,7 +78,7 @@ public class QuotationController {
 		dto.setUpdatedBy(quotationRequest.getUpdatedBy());
 		return dto;
 	}
-	
+
 	@PutMapping("/update-quotation")
 	public ResponseEntity<ResponseQuotationtDTO> updateQuotation(@RequestBody QuotationEntity entity,@RequestParam RegSource regSource) {
 		ResponseQuotationtDTO response = new ResponseQuotationtDTO();
@@ -96,7 +100,7 @@ public class QuotationController {
 			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
-	
+
 	@GetMapping("/get-quotation")
     public ResponseEntity<GenericResponse<List<QuotationEntity>>> getQuotations(
             @RequestParam(required = false) String reqId,
@@ -114,7 +118,7 @@ public class QuotationController {
 
         return ResponseEntity.ok(response);
     }
-	
-	
+
+
 
 }
