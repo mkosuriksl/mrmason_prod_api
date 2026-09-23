@@ -8,9 +8,9 @@ import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication
 public class MrmasonApplication {
-
 	
 	public static void main(String[] args) {
+		System.out.println("Application has started...");
 		SpringApplication.run(MrmasonApplication.class, args);
 		
 	}

@@ -1,10 +1,12 @@
 package com.application.mrmason.dto;
 
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor       // ✅ Needed for empty initialization
+@NoArgsConstructor
+@Builder// ✅ Needed for empty initialization
 public class GenericResponse<T> {
     private String message;
     private boolean success;

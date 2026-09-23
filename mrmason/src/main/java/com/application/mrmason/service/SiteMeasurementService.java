@@ -12,7 +12,7 @@ import com.application.mrmason.entity.SiteMeasurement;
 import com.application.mrmason.enums.RegSource;
 
 public interface SiteMeasurementService {
-	SiteMeasurement addSiteMeasurement(SiteMeasurement measurement,RegSource regSource);
+	List<SiteMeasurement> addSiteMeasurement(List<SiteMeasurement> measurement,RegSource regSource);
     SiteMeasurement updateSiteMeasurement(SiteMeasurement measurement,RegSource regSource);
     SiteMeasurement findByServiceRequestId(String serviceRequestId);
 //    public List<SiteMeasurement> getSiteMeasurement(String serviceRequestId, String eastSiteLegth, String location);
