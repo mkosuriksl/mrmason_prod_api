@@ -2,147 +2,169 @@ package com.application.mrmason.controller;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.application.mrmason.dto.PlumbingMasterRequest;
 import com.application.mrmason.dto.PlumbingMasterResponse;
 import com.application.mrmason.service.PlumbingMasterService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/plumbing-master")
+@RequiredArgsConstructor
 public class PlumbingMasterController {
 
-    @Autowired
-    private PlumbingMasterService plumbingMasterService;
-
+    private final PlumbingMasterService plumbingMasterService;
 
     // ============================================================
-    // CREATE PLUMBING MASTER
-    // ============================================================
-    //
     // POST
-    // /api/plumbing-master
-    //
-    // ONLY MATERIAL SUPPLIER
-    //
+    // MS ONLY
     // ============================================================
 
-    @PostMapping("create-plumbing-master")
     @PreAuthorize("hasAuthority('MS')")
-    public ResponseEntity<PlumbingMasterResponse> create(
+    @PostMapping
+    public ResponseEntity<?> create(
             @RequestBody PlumbingMasterRequest request) {
 
-        PlumbingMasterResponse response =
-                plumbingMasterService.create(request);
+        try {
 
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(response);
+            PlumbingMasterResponse response =
+                    plumbingMasterService
+                            .createPlumbingMaster(request);
+
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(response);
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(e.getMessage());
+        }
     }
 
-
     // ============================================================
-    // GET PLUMBING MASTER FOR MATERIAL SUPPLIER
-    // ============================================================
-    //
-    // GET
-    // /api/plumbing-master
-    //
-    // ONLY MATERIAL SUPPLIER
-    //
-    // Example:
-    //
-    // /api/plumbing-master?storeId=1
-    //
-    // /api/plumbing-master?storeId=1&productCategory=Plumbing
-    //
+    // GET BY ID
+    // MS ONLY
     // ============================================================
 
-    @GetMapping("get-for-ms")
     @PreAuthorize("hasAuthority('MS')")
-    public ResponseEntity<PlumbingMasterResponse> getForMs(
+    @GetMapping("/{userIdStoreIdSku}")
+    public ResponseEntity<?> getById(
+            @PathVariable String userIdStoreIdSku) {
 
-            @RequestParam(required = false)
-            String storeId,
+        try {
 
-            @RequestParam(required = false)
-            String updatedBy,
+            PlumbingMasterResponse response =
+                    plumbingMasterService
+                            .getById(userIdStoreIdSku);
 
-            @RequestParam(required = false)
-            String productCategory,
+            return ResponseEntity.ok(response);
 
-            @RequestParam(required = false)
-            String productSubCategory) {
+        } catch (RuntimeException e) {
 
-        PlumbingMasterResponse response =
-                plumbingMasterService.getForMs(
-                        storeId,
-                        updatedBy,
-                        productCategory,
-                        productSubCategory);
-
-        return ResponseEntity.ok(response);
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(e.getMessage());
+        }
     }
 
+    // ============================================================
+    // GET BY STORE
+    // MS ONLY
+    // ============================================================
+
+    @PreAuthorize("hasAuthority('MS')")
+    @GetMapping("/store/{storeId}")
+    public ResponseEntity<?> getByStoreId(
+            @PathVariable String storeId) {
+
+        try {
+
+            List<PlumbingMasterResponse> response =
+                    plumbingMasterService
+                            .getByStoreId(storeId);
+
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(e.getMessage());
+        }
+    }
 
     // ============================================================
-    // UPDATE PLUMBING MASTER
-    // ============================================================
-    //
-    // PUT
-    // /api/plumbing-master/{userIdStoreIdSku}
-    //
-    // ONLY MATERIAL SUPPLIER
-    //
-    // Example:
-    //
-    // /api/plumbing-master/MS123_1_70011505
-    //
-    // ============================================================
-@PutMapping
-@PreAuthorize("hasAuthority('MS')")
-public ResponseEntity<PlumbingMasterResponse> update(
-        @RequestParam String userIdStoreIdSku,
-        @RequestBody PlumbingMasterRequest request) {
-
-    PlumbingMasterResponse response =
-            plumbingMasterService.update(
-                    userIdStoreIdSku,
-                    request);
-
-    return ResponseEntity.ok(response);
-}
-
-    // ============================================================
-    // GET PLUMBING MASTER FOR ALL USERS
-    // ============================================================
-    //
-    // GET
-    // /api/plumbing-master/all
-    //
-    // AUTHENTICATED USERS
-    //
+    // GET ALL
+    // ALL USERS
     // ============================================================
 
     @GetMapping("/all")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<PlumbingMasterResponse>> getForAll() {
+    public ResponseEntity<?> getAll() {
 
-        List<PlumbingMasterResponse> response =
-                plumbingMasterService.getForAll();
+        try {
 
-        return ResponseEntity.ok(response);
+            List<PlumbingMasterResponse> response =
+                    plumbingMasterService.getAll();
+
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(e.getMessage());
+        }
+    }
+
+    @PreAuthorize("hasAuthority('MS')")
+     @GetMapping("/ms/all") 
+     public ResponseEntity<?> getAllForMS() 
+     { 
+        try 
+        {
+             List<PlumbingMasterResponse> response = plumbingMasterService.getAll();
+             return ResponseEntity.ok(response); 
+            } catch (RuntimeException e) { 
+                return ResponseEntity .status(HttpStatus.INTERNAL_SERVER_ERROR) .body(e.getMessage()); } 
+            }
+    // ============================================================
+    // UPDATE
+    // MS ONLY
+    // ============================================================
+
+    @PreAuthorize("hasAuthority('MS')")
+    @PutMapping("/{userIdStoreIdSku}")
+    public ResponseEntity<?> update(
+            @PathVariable String userIdStoreIdSku,
+            @RequestBody PlumbingMasterRequest request) {
+
+        try {
+
+            PlumbingMasterResponse response =
+                    plumbingMasterService.update(
+                            userIdStoreIdSku,
+                            request);
+
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(e.getMessage());
+        }
     }
 }

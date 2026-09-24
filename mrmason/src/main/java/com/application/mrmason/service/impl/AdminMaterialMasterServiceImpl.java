@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.application.mrmason.dto.*;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -28,13 +29,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.application.mrmason.config.AWSConfig;
-import com.application.mrmason.dto.AdminDetailsDto;
-import com.application.mrmason.dto.AdminMaterialMasterResponseDTO;
-import com.application.mrmason.dto.AdminMaterialMasterResponseWithImageDto;
-import com.application.mrmason.dto.MaterialDTO;
-import com.application.mrmason.dto.MaterialGroupDTO;
-import com.application.mrmason.dto.MaterialSupplierDto;
-import com.application.mrmason.dto.ResponseModel;
 import com.application.mrmason.entity.AdminDetails;
 import com.application.mrmason.entity.AdminMaterialMaster;
 import com.application.mrmason.entity.MaterialMaster;
@@ -567,6 +561,40 @@ public class AdminMaterialMasterServiceImpl implements AdminMaterialMasterServic
 		}
 
 		return new AdminMaterialMasterResponseDTO(materialDtos, adminDtos, supplierDtos);
+	}
+
+	@Override
+	public List<String> listAllMaterialMaster() {
+
+		List<AdminMaterialMaster> materialList = adminMaterialMasterRepository.findAll();
+		return materialList.stream()
+				.map(AdminMaterialMaster::getMaterialCategory)
+				.distinct()
+				.collect(Collectors.toList());
+	}
+
+	@Override
+	public List<MaterialSearchResultDTO> searchMaterialMaster(String materialCategory, String materialSubCategory, String brand, String userInput) {
+
+		if (userInput == null || userInput.trim().isEmpty()) {
+			return new ArrayList<>();
+		}
+
+		return adminMaterialMasterRepository.findMatchingModelNameAndSku(
+				materialCategory,
+				materialSubCategory,
+				brand,
+				userInput.trim()
+		);
+	}
+
+	@Override
+	public List<MaterialMasterProductResponseDto> getProductBrandAndSku() {
+
+		List<MaterialMasterProductResponseDto> materialList = adminMaterialMasterRepository.findAllMaterial();
+
+		return materialList.stream()
+				.collect(Collectors.toList());
 	}
 
 	// --- Mapping helpers ---

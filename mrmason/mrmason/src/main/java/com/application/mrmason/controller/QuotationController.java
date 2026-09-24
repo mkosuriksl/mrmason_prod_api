@@ -43,6 +43,7 @@ public class QuotationController {
 		return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
 	}
 
+<<<<<<< HEAD
 	@PostMapping("/add-quotation")
 	public ResponseEntity<ResponseQuotationtDTO> createQuotation(@RequestBody QuotationEntity entity,@RequestParam RegSource regSource) {
 		ResponseQuotationtDTO response = new ResponseQuotationtDTO();
@@ -64,6 +65,30 @@ public class QuotationController {
 			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
+=======
+	if (savedQuotation != null) {
+		response.setMessage("QuotationRequest added successfully");
+		response.setStatus(true);
+		response.setData(mapToDTO(savedQuotation));
+		return ResponseEntity.ok(response);
+	} else {
+		response.setMessage("Failed to add site quotationRequest");
+		response.setStatus(false);
+		return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+	}
+} catch (ResourceNotFoundException | IllegalArgumentException e) {
+		log.error("Validation error adding quotation: {}", e.getMessage());
+		response.setMessage(e.getMessage());
+		response.setStatus(false);
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+		} catch (Exception e) {
+		log.error("Internal server error adding quotation: ", e);
+        response.setMessage("An error occurred: " + e.getMessage());
+		response.setStatus(false);
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+}
+>>>>>>> 9eb01aa08e6909cbd76547d5f9adfd2374a3a528
 
 	private QuotationDTO mapToDTO(QuotationEntity quotationRequest) {
 		QuotationDTO dto = new QuotationDTO();
@@ -75,6 +100,10 @@ public class QuotationController {
 		dto.setUnit(quotationRequest.getUnit());
 		dto.setUpdatedDate(quotationRequest.getUpdatedDate());
 		dto.setUpdatedBy(quotationRequest.getUpdatedBy());
+<<<<<<< HEAD
+=======
+		dto.setRegSource(quotationRequest.getRegSource());
+>>>>>>> 9eb01aa08e6909cbd76547d5f9adfd2374a3a528
 		return dto;
 	}
 	

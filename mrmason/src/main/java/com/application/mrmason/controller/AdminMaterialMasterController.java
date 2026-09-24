@@ -4,6 +4,7 @@ import java.nio.file.AccessDeniedException;
 import java.util.List;
 import java.util.Map;
 
+import com.application.mrmason.dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,12 +20,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.application.mrmason.dto.AdminMaterialMasterRequestDTO;
-import com.application.mrmason.dto.AdminMaterialMasterResponseDTO;
-import com.application.mrmason.dto.AdminMaterialMasterResponseWithImageDto;
-import com.application.mrmason.dto.GenericResponse;
-import com.application.mrmason.dto.MaterialGroupDTO;
-import com.application.mrmason.dto.ResponseGetAdminMaterialMasterDto;
 import com.application.mrmason.entity.AdminMaterialMaster;
 import com.application.mrmason.enums.RegSource;
 import com.application.mrmason.service.AdminMaterialMasterService;
@@ -46,7 +41,7 @@ public class AdminMaterialMasterController {
 		return new GenericResponse<>("Materials saved successfully", true, savedMaterials);
 	}
 
-	@PutMapping("/updatebycategory")
+	@PutMapping("/update")
 	public ResponseEntity<GenericResponse<List<AdminMaterialMaster>>> updateAdminMaterialMasters(
 			@RequestBody AdminMaterialMasterRequestDTO requestDTO, @RequestParam("regSource") RegSource regSource)
 			throws AccessDeniedException {
@@ -131,4 +126,67 @@ public class AdminMaterialMasterController {
 				location);
 	}
 
+	@GetMapping("/get_material_category")
+	public ResponseEntity<GenericResponse<List<String>>> getMaterialCategory() {
+		try{
+		List<String> materialList = adminMaterialMasterService.listAllMaterialMaster();
+			GenericResponse<List<String>> response = GenericResponse.<List<String>>builder()
+					.data(materialList)
+					.success(true)
+					.message("Successfully retrieved material category")
+					.build();
+			return ResponseEntity.ok(response);
+		}catch (Exception e) {
+			e.printStackTrace();
+			GenericResponse<List<String>> errorResponse = GenericResponse.<List<String>>builder()
+					.data(null)
+					.success(false)
+					.message("Unable to fetch material category "+ e.getMessage())
+					.build();
+			return ResponseEntity.ok(errorResponse);
+		}
+	}
+
+	@GetMapping("/product_sku")
+	public ResponseEntity<GenericResponse<List<MaterialSearchResultDTO>>> searchMaterialMaster(String materialCategory, String materialSubCategory, String brand, String userInput) {
+
+		try {
+			List<MaterialSearchResultDTO> response = adminMaterialMasterService.searchMaterialMaster(materialCategory, materialSubCategory, brand, userInput);
+
+			GenericResponse<List<MaterialSearchResultDTO>> success = GenericResponse.<List<MaterialSearchResultDTO>>builder()
+					.data(response)
+					.success(true)
+					.message("Fetched product name and sku successfully")
+					.build();
+			return ResponseEntity.ok(success);
+		}catch (Exception e) {
+			GenericResponse<List<MaterialSearchResultDTO>> error = GenericResponse.<List<MaterialSearchResultDTO>>builder()
+					.data(null)
+					.success(false)
+					.message("Unable to fetch product name and sku " + e.getMessage())
+					.build();
+			return ResponseEntity.ok(error);
+		}
+
+	}
+	@GetMapping("/get-product")
+	public ResponseEntity<GenericResponse<List<MaterialMasterProductResponseDto>>> getProducts (){
+
+		try{
+			List<MaterialMasterProductResponseDto> response = adminMaterialMasterService.getProductBrandAndSku();
+			GenericResponse<List<MaterialMasterProductResponseDto>> success = GenericResponse.<List<MaterialMasterProductResponseDto>>builder()
+					.data(response)
+					.success(true)
+					.message("Fetched material data successfully")
+					.build();
+			return ResponseEntity.ok(success);
+		}catch (Exception e) {
+			GenericResponse<List<MaterialMasterProductResponseDto>> error = GenericResponse.<List<MaterialMasterProductResponseDto>>builder()
+					.data(null)
+					.success(false)
+					.message("Unable to fetch material data " + e.getMessage())
+					.build();
+			return ResponseEntity.ok(error);
+		}
+	}
 }

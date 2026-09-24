@@ -841,7 +841,3 @@ public List<ElectricalMasterResponse> getForMs() {
         return response;
     }
 }
-<<<<<<< Updated upstream:mrmason/src/main/java/com/application/mrmason/service/impl/ElectricalMasterServiceImpl.java
-
-=======
->>>>>>> Stashed changes:mrmason/mrmason/src/main/java/com/application/mrmason/service/impl/ElectricalMasterServiceImpl.java

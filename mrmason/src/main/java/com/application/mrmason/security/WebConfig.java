@@ -8,6 +8,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -18,18 +19,18 @@ public class WebConfig {
 
 	@Autowired
 	CustomUserService registrationService;
-	private final BCryptPasswordEncoder bCryptPasswordEncoder;
+	private final PasswordEncoder passwordEncoder;
 
 	@Autowired
-	public WebConfig(BCryptPasswordEncoder bCryptPasswordEncoder) {
-		this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+	public WebConfig(PasswordEncoder passwordEncoder) {
+		this.passwordEncoder = passwordEncoder;
 	}
 
 	@Bean
 	public DaoAuthenticationProvider customDaoAuthenticationProvider() {
 		DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
 		provider.setUserDetailsService(registrationService);
-		provider.setPasswordEncoder(bCryptPasswordEncoder);
+		provider.setPasswordEncoder(passwordEncoder);
 		return provider;
 	}
 
@@ -41,6 +42,7 @@ public class WebConfig {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http.cors(AbstractHttpConfigurer::disable).csrf(AbstractHttpConfigurer::disable)
+
 				.exceptionHandling((exception) -> exception.authenticationEntryPoint(new JwtAuthEntryPoint()))
 				.sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth.requestMatchers("/login", "/error", "/addAdminDetails",
@@ -59,10 +61,17 @@ public class WebConfig {
 						"/api/fr/register","/api/fr/send-otp","/api/fr/verify-otp",
 						"/api/fr/login","/api/fr/forgot/verify-otp","/api/fr/forgot/send-otp",
 						"/carstand-api/getUserServiceCharegs-withoutSecurity",
+						"/api/public_header_detailed",
 						"/api/distinct-location-by-machine","/admin-machine-assets/get","/getUserServiceCharegs-withoutSecurity",
 						"/getBhatServiceCategory","/getBhatServiceCategory/nonCivil/{serviceCategory}","/getBhatServiceCategory/civil/{serviceCategory}",
 						"/swagger-resources", "/swagger-resources/**", "/configuration/ui", "/configuration/security","/api/distinct-location-by-ms","/distinct-location-by-sp",
-						"/swagger-ui/**", "/webjars/**", "/swagger-ui.html", "/getRentalAssetsNoAuth","/getAdminUiEndPoint","/api/home-search-by-location","/api/home-search-by-machine").permitAll()
+						"/swagger-ui/**", "/webjars/**", "/swagger-ui.html", "/getRentalAssetsNoAuth","/getAdminUiEndPoint","/api/home-search-by-location","/api/home-search-by-machine",
+								"/admin-material-master/get_material_category",
+								"/admin-material-master/product_sku",
+								"/admin-material-master/get-product",
+								"api/super-admin/**").permitAll()
+						.requestMatchers("/api/quotation/get_all_quotation_info").hasAnyRole("MS", "Adm")
+						.requestMatchers("/api/admin-roles/create-role").hasAnyRole("SADM", "Adm")
 						.anyRequest().authenticated());
 
 		http.authenticationProvider(customDaoAuthenticationProvider());
