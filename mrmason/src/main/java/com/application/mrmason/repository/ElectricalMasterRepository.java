@@ -6,43 +6,18 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.application.mrmason.entity.PlumbingMaster;
+import com.application.mrmason.entity.ElectricalMaster;
 
 @Repository
-public interface PlumbingMasterRepository
-        extends JpaRepository<PlumbingMaster, String> {
+public interface ElectricalMasterRepository
+        extends JpaRepository<ElectricalMaster, String> {
 
     // ============================================================
     // FIND BY PRIMARY KEY
     // ============================================================
 
-    Optional<PlumbingMaster> findByUserIdStoreIdSku(
+    Optional<ElectricalMaster> findByUserIdStoreIdSku(
             String userIdStoreIdSku);
-
-
-    // ============================================================
-    // FIND ALL RECORDS BELONGING TO MATERIAL SUPPLIER
-    // ============================================================
-
-    List<PlumbingMaster> findByUpdatedBy(
-            String updatedBy);
-
-
-    // ============================================================
-    // FIND RECORDS BY STORE
-    // ============================================================
-
-    List<PlumbingMaster> findByStore_StoreId(
-            String storeId);
-
-
-    // ============================================================
-    // FIND STORE RECORDS BELONGING TO MATERIAL SUPPLIER
-    // ============================================================
-
-    List<PlumbingMaster> findByStore_StoreIdAndUpdatedBy(
-            String storeId,
-            String updatedBy);
 
 
     // ============================================================
@@ -51,4 +26,23 @@ public interface PlumbingMasterRepository
 
     boolean existsByUserIdStoreIdSku(
             String userIdStoreIdSku);
+
+
+    // ============================================================
+    // FIND BY MS USER
+    // ============================================================
+
+    List<ElectricalMaster> findByUpdatedBy(
+            String updatedBy);
+
+
+    // ============================================================
+    // FIND BY STORE
+    // ============================================================
+
+    List<ElectricalMaster> findByStore_StoreId(
+            String storeId);
+
+
+
 }

@@ -28,20 +28,20 @@ public interface AdminMaterialMasterService {
 			throws AccessDeniedException;
 
 	Page<AdminMaterialMasterResponseWithImageDto> getAdminMaterialMaster(
-	        String materialCategory, String materialSubCategory,
-	        String brand, String modelNo, String size, String shape,
-	        String userId, Pageable pageable, Map<String, String> requestParams) throws AccessDeniedException;
+			String materialCategory, String materialSubCategory,
+			String brand, String modelNo, String size, String shape,
+			String userId, Pageable pageable, Map<String, String> requestParams) throws AccessDeniedException;
 
 	ResponseEntity<ResponseModel> uploadDoc(RegSource regSource, String skuId,
-			MultipartFile materialMasterImage1, MultipartFile materialMasterImage2, MultipartFile materialMasterImage3,
-			MultipartFile materialMasterImage4, MultipartFile materialMasterImage5) throws AccessDeniedException;
+	                                        MultipartFile materialMasterImage1, MultipartFile materialMasterImage2, MultipartFile materialMasterImage3,
+	                                        MultipartFile materialMasterImage4, MultipartFile materialMasterImage5) throws AccessDeniedException;
 
 	List<String> findDistinctBrandByMaterialCategory(String materialCategory, String materialSubCategory, Map<String, String> requestParams);
 
 	List<Map<String, Object>> findDistinctMaterialCategoryWithSubCategory();
 
 	AdminMaterialMasterResponseDTO getMaterialsWithUserInfo(String materialCategory, String materialSubCategory,
-			String brand, String location);
+	                                                        String brand, String location);
 
 	List<String> listAllMaterialMaster();
 

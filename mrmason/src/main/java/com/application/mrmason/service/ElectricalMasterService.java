@@ -1,43 +1,42 @@
+
 package com.application.mrmason.service;
 
 import java.util.List;
 
-import com.application.mrmason.dto.PlumbingMasterRequest;
-import com.application.mrmason.dto.PlumbingMasterResponse;
+import com.application.mrmason.dto.ElectricalMasterRequest;
+import com.application.mrmason.dto.ElectricalMasterResponse;
 
-public interface PlumbingMasterService {
+public interface ElectricalMasterService {
 
     // ============================================================
     // CREATE
     // ============================================================
 
-    PlumbingMasterResponse create(
-            PlumbingMasterRequest request);
+    ElectricalMasterResponse create(
+            ElectricalMasterRequest request);
 
 
     // ============================================================
     // GET FOR MATERIAL SUPPLIER
     // ============================================================
 
-    PlumbingMasterResponse getForMs(
-            String storeId,
-            String updatedBy,
-            String productCategory,
-            String productSubCategory);
+    List<ElectricalMasterResponse> getForMs(
+    );
 
 
     // ============================================================
     // UPDATE
     // ============================================================
 
-    PlumbingMasterResponse update(
+    ElectricalMasterResponse update(
             String userIdStoreIdSku,
-            PlumbingMasterRequest request);
+            ElectricalMasterRequest request);
 
 
     // ============================================================
     // GET FOR ALL USERS
     // ============================================================
 
-    List<PlumbingMasterResponse> getForAll();
+    List<ElectricalMasterResponse> getForAll();
+
 }

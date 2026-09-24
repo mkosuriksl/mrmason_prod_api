@@ -33,6 +33,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+application-local.properties
 .poolside
 # Ignore IntelliJ IDEA project files
 .idea/
@@ -40,4 +42,3 @@ build/
 .idea/misc.xml
 .idea/workspace.xml
 
-application-second.properties
