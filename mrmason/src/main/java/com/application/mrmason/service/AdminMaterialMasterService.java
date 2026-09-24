@@ -43,4 +43,8 @@ public interface AdminMaterialMasterService {
 	List<MaterialSearchResultDTO> searchMaterialMaster(String materialCategory, String materialSubCategory, String brand, String userInput);
 
 	List<MaterialMasterProductResponseDto> getProductBrandAndSku();
+
+	MaterialCategoryHierarchyDto getMaterialHierarchyByCategory(String category);
+
+
 }

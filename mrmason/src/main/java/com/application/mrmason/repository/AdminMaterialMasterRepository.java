@@ -22,7 +22,7 @@ public interface AdminMaterialMasterRepository extends JpaRepository<AdminMateri
 
 
 
-		@Query("SELECT new com.application.mrmason.dto.MaterialSearchResultDTO(m.modelName, m.sku) " +
+		@Query("SELECT new com.application.mrmason.dto.MaterialSearchResultDTO(m.sku, m.brand, m.modelNo, m.modelName, m.materialCategory, m.materialSubCategory) " +
 				"FROM MaterialMaster m " +
 				"WHERE LOWER(m.materialCategory) = LOWER(:category) " +
 				"  AND LOWER(m.materialSubCategory) = LOWER(:subCategory) " +
@@ -45,9 +45,19 @@ public interface AdminMaterialMasterRepository extends JpaRepository<AdminMateri
 				"AND LOWER(m.sku) = LOWER(:sku)")
 		List<MaterialMasterProductResponseDto> findAllMaterial();*/
 
-	@Query("SELECT new com.application.mrmason.dto.MaterialMasterProductResponseDto(" +
-			"m.materialCategory, m.materialSubCategory, m.brand, m.modelName, m.sku) " +
+	@Query("SELECT new com.application.mrmason.dto.MaterialMasterProductResponseDto(m.sku, m.brand) " +
 			"FROM MaterialMaster m")
 	List<MaterialMasterProductResponseDto> findAllMaterial();
+
+	@Query(value = "SELECT DISTINCT " +
+			"  sku, " +
+			"  brand, " +
+			"  model_no, " +
+			"  model_name, " +
+			"  material_sub_category " +
+			"FROM admin_material_master " +
+			"WHERE LOWER(material_category) = LOWER(:category)",
+			nativeQuery = true)
+	List<Object[]> findRawMaterialItemsByCategory(@Param("category") String category);
 
 }

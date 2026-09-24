@@ -1,6 +1,9 @@
 package com.application.mrmason.dto;
 
+import com.application.mrmason.entity.UserType;
+import com.application.mrmason.enums.RegSource;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,53 +18,91 @@ import java.util.List;
 @AllArgsConstructor
 public class CxQuotationResponseDto {
 
-    @JsonProperty("request_id")
-    private String requestId;
-
-    @JsonProperty("updated_by")
+    @Column(name = "updated_by")
     private String updatedBy;
 
-    @JsonProperty("updated_date")
+    @Column(name = "updated_date")
     private LocalDateTime updatedDate;
 
-    @JsonProperty("expected_delivery_date")
+    @Column(name = "expected_delievery_date")
     private String expectedDeliveryDate;
 
-    @JsonProperty("delivery_location")
+    @Column(name = "delivery_location")
     private String deliveryLocation;
 
-    @JsonProperty("pincode")
+    @Column(name = "pincode")
     private String pincode;
 
-    @JsonProperty("item_list")
-    private List<QuotationItem> itemList;
+    @JsonProperty("header_item")
+    private List<CxQuotationHeader> headerlist;
+
+    @JsonProperty("header_details")
+    private List<CxQuotationHeaderDetail> headerDetail;
+
+    @JsonProperty("customer_details")
+    private CustomerDetails customerDetails;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CxQuotationHeader {
+
+        @Column(name = "material_request_id")
+        private String materialRequestId;
+
+        @Column(name = "requested_date")
+        private String requestDate;
+
+        @Column(name = "request_status")
+        private String requestStatus = "New";
+
+        @Column(name = "requested_by")
+        private String materialRequestRequestedBy;
+
+    }
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
-    public static class QuotationItem {
+    public static class CxQuotationHeaderDetail {
 
-        @JsonProperty("id")
-        private Long id;
+        @Column(name="quotation_request_line_id")
+        private String quotationRequestLineId;
 
-        @JsonProperty("product_category")
+        @Column(name = "quotation_id")
+        private String quotationId;
+
+        @Column(name = "product_category")
         private String productCategory;
 
-        @JsonProperty("product_sub_category")
+        @Column(name = "product_sub_category")
         private String productSubCategory;
 
-        @JsonProperty("brand")
+        @Column(name = "brand")
         private String brand;
 
-        @JsonProperty("stock_keeping_unit")
-        private String stockKeepingUnit;
+        @Column(name = "sku")
+        private String sku;
 
-        @JsonProperty("product_name")
+        @Column(name = "product_name")
         private String productName;
 
-        @JsonProperty("quantity")
+        @Column(name = "quantity")
         private String quantity;
+    }
 
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CustomerDetails {
+        private String name;
+        private String email;
+        private String mobile;
+        private String userId;
+        private UserType userType;
+        private RegSource regSource;
     }
 }

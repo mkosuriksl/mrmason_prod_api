@@ -20,7 +20,7 @@ import lombok.Setter;
 public class UploadAdminMaterialMaster {
 
 	@Id
-	@Column(name = "skuId")
+	@Column(name = "sku_id")
 	private String skuId;
 	
 	@Column(name = "updated_by")

@@ -12,7 +12,9 @@ target/
 .settings
 .springBeans
 .sts4-cache
-
+.idea/compiler.xml
+.idea/misc.xml
+.idea/workspace.xml
 ### IntelliJ IDEA ###
 .idea
 *.iws
@@ -32,6 +34,10 @@ build/
 ### VS Code ###
 .vscode/
 .poolside
-
+# Ignore IntelliJ IDEA project files
+.idea/
+.idea/compiler.xml
+.idea/misc.xml
+.idea/workspace.xml
 
 application-second.properties

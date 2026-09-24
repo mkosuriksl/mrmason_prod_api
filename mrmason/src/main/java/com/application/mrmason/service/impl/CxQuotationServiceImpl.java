@@ -2,213 +2,311 @@ package com.application.mrmason.service.impl;
 
 import com.application.mrmason.dto.CxQuotationRequestDto;
 import com.application.mrmason.dto.CxQuotationResponseDto;
-import com.application.mrmason.entity.CustomerRegistration;
-import com.application.mrmason.entity.CxQuotation;
-import com.application.mrmason.entity.User;
-import com.application.mrmason.entity.UserType;
-import com.application.mrmason.repository.CustomerRegistrationRepo;
-import com.application.mrmason.repository.CxQuotationRepository;
-import com.application.mrmason.security.JwtService;
+import com.application.mrmason.entity.*;
+import com.application.mrmason.repository.*;
 import com.application.mrmason.service.CxQuotationService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
-@Slf4j
 @RequiredArgsConstructor
 public class CxQuotationServiceImpl implements CxQuotationService {
 
     private final CxQuotationRepository cxQuotationRepository;
+    private final CxMaterialRequestHeaderRepository cxMaterialRequestHeaderRepository;
+    private final CxQuotationHeaderDetailRepository cxQuotationHeaderDetailRepository;
     private final CustomerRegistrationRepo customerRegistrationRepo;
-    private final EmailServiceImpl emailService;
+    private final AdminDetailsRepo adminDetailsRepo;
 
     @Override
+    @Transactional
     public List<CxQuotationResponseDto> createQuotation(List<CxQuotationRequestDto> dtoList) {
 
         if (dtoList == null || dtoList.isEmpty()) {
-            throw new IllegalArgumentException("Quotation details list cannot be null or empty");
+            throw new IllegalArgumentException("Quotation request list cannot be null or empty");
         }
+
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
         CustomerRegistration customer = customerRegistrationRepo.findByUserEmailOne(currentEmail)
-                .orElseThrow(() -> new RuntimeException("No customer found : " + currentEmail));
-
+                .orElseThrow(() -> new RuntimeException("No customer found for email: " + currentEmail));
 
         String loggedUser = customer.getUserid();
-        String DateFormat = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        String uniqueId = "QT" + DateFormat;
+        LocalDateTime now = LocalDateTime.now();
 
-        List<CxQuotation> quotationsToSave = dtoList.stream()
-                .map(itemDto -> CxQuotation.builder()
-                        .id(itemDto.getId())
-                        .requestId(uniqueId)
-                        .productName(itemDto.getProductName())
-                        .productCategory(itemDto.getProductCategory())
-                        .productSubCategory(itemDto.getProductSubCategory())
-                        .brand(itemDto.getBrand())
-                        .stockKeepingUnit(itemDto.getStockKeepingUnit())
-                        .quantity(itemDto.getQuantity())
-                        .expectedDeliveryDate(itemDto.getExpectedDeliveryDate())
-                        .deliveryLocation(itemDto.getDeliveryLocation())
-                        .pincode(itemDto.getPincode())
-                        .updatedBy(loggedUser)
-                        .updatedDate(LocalDateTime.now())
-                        .build())
-                .collect(Collectors.toList());
+        String dateTimestamp = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String basePrefix = "CMR" + dateTimestamp;
 
-        List<CxQuotation> savedQuotations = cxQuotationRepository.saveAll(quotationsToSave);
+        List<CxQuotationResponseDto> responseList = new ArrayList<>();
 
-        for(CxQuotation quotation : savedQuotations){
+        List<CxMaterialQuotationRequestHeader> headersToSave = new ArrayList<>();
+        List<CxMaterialQuotationRequestHeaderDetails> detailsToSave = new ArrayList<>();
 
-        String subject = "Confirmed Quotation - " + quotation.getProductName();
-        String body = String.format(
-                "Dear %s,<br><br>" +
-                        "Your quotation for '%s' (Quantity: %s) has been successfully created." +
-                        "<br><br>Thank You!",
-                customer.getCustomerName(),
-                quotation.getProductName(),
-                quotation.getQuantity(),
-                quotation.getRequestId());
+        for (CxQuotationRequestDto requestDto : dtoList) {
 
-        emailService.sendEmail(customer.getUserEmail(), subject, body);
+            List<CxQuotationResponseDto.CxQuotationHeader> responseHeaders = new ArrayList<>();
+
+                    String matRequestDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+                    CxQuotationResponseDto.CxQuotationHeader responseHeader = CxQuotationResponseDto.CxQuotationHeader.builder()
+                            .materialRequestId(basePrefix)
+                            .requestDate(matRequestDate)
+                            .requestStatus("New")
+                            .materialRequestRequestedBy(loggedUser)
+                            .build();
+
+                    responseHeaders.add(responseHeader);
+                    CxMaterialQuotationRequestHeader headerEntity = CxMaterialQuotationRequestHeader.builder()
+                            .materialRequestId(basePrefix)
+                            .requestDate(responseHeader.getRequestDate())
+                            .requestStatus(responseHeader.getRequestStatus())
+                            .materialRequestRequestedBy(loggedUser)
+                            .updatedBy(loggedUser)
+                            .updatedDate(now)
+                            .expectedDeliveryDate(requestDto.getExpectedDeliveryDate())
+                            .deliveryLocation(requestDto.getDeliveryLocation())
+                            .pincode(requestDto.getPincode())
+                            .build();
+
+                    headersToSave.add(headerEntity);
+
+
+            List<CxQuotationResponseDto.CxQuotationHeaderDetail> responseDetails = new ArrayList<>();
+            if (requestDto.getHeaderDetail() != null) {
+                int lineCounter = 1;
+                for (CxQuotationRequestDto.CxQuotationHeaderDetail detailItem : requestDto.getHeaderDetail()) {
+                    String generatedLineId = String.format("%s%02d", basePrefix, lineCounter++);
+
+                    String quoteId = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+                    CxQuotationResponseDto.CxQuotationHeaderDetail responseDetail = CxQuotationResponseDto.CxQuotationHeaderDetail.builder()
+                            .quotationRequestLineId(generatedLineId)
+                            .quotationId(quoteId)
+                            .productCategory(detailItem.getProductCategory())
+                            .productSubCategory(detailItem.getProductSubCategory())
+                            .brand(detailItem.getBrand())
+                            .sku(detailItem.getSku())
+                            .productName(detailItem.getProductName())
+                            .quantity(detailItem.getQuantity())
+                            .build();
+
+                    responseDetails.add(responseDetail);
+                    CxMaterialQuotationRequestHeaderDetails detailEntity = CxMaterialQuotationRequestHeaderDetails.builder()
+                            .quotationRequestLineId(generatedLineId)
+                            .quotationId(quoteId)
+                            .productCategory(detailItem.getProductCategory())
+                            .productSubCategory(detailItem.getProductSubCategory())
+                            .brand(detailItem.getBrand())
+                            .sku(detailItem.getSku())
+                            .productName(detailItem.getProductName())
+                            .quantity(detailItem.getQuantity())
+                            .updatedBy(loggedUser)
+                            .updatedDate(now)
+                            .build();
+
+                    detailsToSave.add(detailEntity);
+                }
+            }
+            CxQuotationResponseDto responseDto = CxQuotationResponseDto.builder()
+                    .updatedBy(loggedUser)
+                    .updatedDate(now)
+                    .expectedDeliveryDate(requestDto.getExpectedDeliveryDate())
+                    .deliveryLocation(requestDto.getDeliveryLocation())
+                    .pincode(requestDto.getPincode())
+                    .headerlist(responseHeaders)
+                    .headerDetail(responseDetails)
+                    .build();
+
+            responseList.add(responseDto);
         }
-        return mapToDtoList(savedQuotations);
+
+        if (!headersToSave.isEmpty()) {
+            cxQuotationRepository.saveAll(headersToSave);
+        }
+        if (!detailsToSave.isEmpty()) {
+            cxQuotationHeaderDetailRepository.saveAll(detailsToSave);
+        }
+
+        return responseList;
     }
 
-    /*--------------------------------------Get my quotation (logged in user)----------------------------------------*/
-
     @Override
-    public List<CxQuotationResponseDto> getMyQuotation(CxQuotationRequestDto dto) {
+    public List<CxQuotationResponseDto> getAllQuotation(String productCategory, String productSubCategory, String brand, String stockKeepingUnit, String productName, String quantity, String pincode, String updatedBy, String expectedDeliveryDate, String updatedDate) {
 
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        CustomerRegistration customer = customerRegistrationRepo.findByUserEmailOne(currentEmail)
-                .orElseThrow(() -> new RuntimeException("No customer found : " + currentEmail));
+        AdminDetails admin = adminDetailsRepo.findByEmail(currentEmail);
+        if (admin == null) {
+            throw new SecurityException("Access denied: Only Admin and Material Supplier roles can access all quotations.");
+        }
 
-        String customerId = customer.getUserid();
+        UserType userRole = admin.getUserType();
+        if (userRole == null || (!userRole.equals(UserType.Adm) && !userRole.equals(UserType.MS))) {
+            throw new SecurityException("Access denied: Only ADMIN and MS roles can access all quotations.");
+        }
 
-        List<CxQuotation> quotationList = cxQuotationRepository.findByUpdatedBy(customerId);
+        List<CxMaterialQuotationRequestHeaderDetails> detailsList = cxQuotationHeaderDetailRepository.searchAllQuotationDetails(
+                productCategory, productSubCategory, brand, stockKeepingUnit,
+                productName, quantity, pincode, updatedBy, expectedDeliveryDate, updatedDate
+        );
 
-        return mapToDtoList(quotationList);
+        Map<String, List<CxMaterialQuotationRequestHeaderDetails>> groupedDetails = detailsList.stream()
+                .collect(Collectors.groupingBy(detail -> detail.getQuotationRequestLineId().split("_")[0]));
+
+        List<CxQuotationResponseDto> responseList = new ArrayList<>();
+
+        for (Map.Entry<String, List<CxMaterialQuotationRequestHeaderDetails>> entry : groupedDetails.entrySet()) {
+            String materialRequestId = entry.getKey();
+            List<CxMaterialQuotationRequestHeaderDetails> lineItems = entry.getValue();
+
+            CxMaterialQuotationRequestHeader header = cxQuotationRepository.findById(materialRequestId)
+                    .orElse(null);
+
+            if (header != null) {
+                CxQuotationResponseDto.CxQuotationHeader responseHeader = CxQuotationResponseDto.CxQuotationHeader.builder()
+                        .materialRequestId(header.getMaterialRequestId())
+                        .requestDate(header.getRequestDate())
+                        .requestStatus(header.getRequestStatus())
+                        .materialRequestRequestedBy(header.getMaterialRequestRequestedBy())
+                        .build();
+
+                List<CxQuotationResponseDto.CxQuotationHeaderDetail> responseDetails = lineItems.stream()
+                        .map(item -> CxQuotationResponseDto.CxQuotationHeaderDetail.builder()
+                                .quotationRequestLineId(item.getQuotationRequestLineId())
+                                .quotationId(item.getQuotationId())
+                                .productCategory(item.getProductCategory())
+                                .productSubCategory(item.getProductSubCategory())
+                                .brand(item.getBrand())
+                                .sku(item.getSku())
+                                .productName(item.getProductName())
+                                .quantity(item.getQuantity())
+                                .build())
+                        .collect(Collectors.toList());
+
+                // Fetch customer details
+                CxQuotationResponseDto.CustomerDetails customerDetails = null;
+                if (header.getUpdatedBy() != null && !header.getUpdatedBy().isEmpty()) {
+                    CustomerRegistration customer = customerRegistrationRepo.findByUserid(header.getUpdatedBy());
+                    if (customer != null) {
+                        customerDetails = CxQuotationResponseDto.CustomerDetails.builder()
+                                .name(customer.getCustomerName())
+                                .email(customer.getUserEmail())
+                                .mobile(customer.getUserMobile())
+                                .userId(customer.getUserid())
+                                .userType(customer.getUserType())
+                                .regSource(customer.getRegSource())
+                                .build();
+                    }
+                }
+
+                CxQuotationResponseDto responseDto = CxQuotationResponseDto.builder()
+                        .updatedBy(header.getUpdatedBy())
+                        .updatedDate(header.getUpdatedDate())
+                        .expectedDeliveryDate(header.getExpectedDeliveryDate())
+                        .deliveryLocation(header.getDeliveryLocation())
+                        .pincode(header.getPincode())
+                        .headerlist(List.of(responseHeader))
+                        .headerDetail(responseDetails)
+                        .customerDetails(customerDetails)
+                        .build();
+
+                responseList.add(responseDto);
+            }
+        }
+        return responseList;
     }
-
-    /*-------------------------------------update my quotation (logged in user)-------------------------------------*/
 
     @Override
     public CxQuotationResponseDto updateQuotation(CxQuotationRequestDto dto) {
-
-        if (dto == null || dto.getRequestId() == null) {
-            throw new RuntimeException("Request ID and details cannot be null");
-        }
-
-        String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        CustomerRegistration customer = customerRegistrationRepo.findByUserEmailOne(currentEmail)
-                .orElseThrow(() -> new RuntimeException("No customer found : " + currentEmail));
-
-        String customerId = customer.getUserid();
-
-        CxQuotation quotation = cxQuotationRepository.findById(dto.getRequestId())
-                .orElseThrow(() -> new RuntimeException("No request id found : " + dto.getRequestId()));
-
-        if (!customerId.equals(quotation.getUpdatedBy())) {
-            throw new RuntimeException("Unauthorized: You do not have permission to update this quotation");
-        }
-
-        quotation.setQuantity(dto.getQuantity());
-        quotation.setDeliveryLocation(dto.getDeliveryLocation());
-        quotation.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
-        quotation.setPincode(dto.getPincode());
-        quotation.setUpdatedBy(customerId);
-        quotation.setUpdatedDate(LocalDateTime.now());
-
-        CxQuotation updatedQuotation = cxQuotationRepository.save(quotation);
-
-        return mapToDtoList(Collections.singletonList(updatedQuotation)).get(0);
+        return null;
     }
 
     @Override
-    public List<CxQuotationResponseDto> getAllQuotation(String productCategory,
-                                                        String productSubCategory,
-                                                        String brand,
-                                                        String stockKeepingUnit,
-                                                        String productName,
-                                                        String quantity,
-                                                        String pincode,
-                                                        String updatedBy,
-                                                        String expectedDeliveryDate,
-                                                        String updatedDate) {
+    public List<CxQuotationResponseDto> getMyQuotation(CxQuotationRequestDto dto) {
+        String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        LocalDateTime parsedUpdatedDate = null;
-        if (updatedDate != null && !updatedDate.trim().isEmpty()) {
+        CustomerRegistration customer = customerRegistrationRepo.findByUserEmailOne(currentEmail)
+                .orElseThrow(() -> new RuntimeException("No customer found for email: " + currentEmail));
 
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-            parsedUpdatedDate = LocalDate.parse(updatedDate, formatter).atStartOfDay();
-        }
+        String customerId = customer.getUserid();
+        List<CxMaterialQuotationRequestHeader> headers = cxMaterialRequestHeaderRepository.findByCustomerId(customerId);
 
-        List<CxQuotation> quotationAllList = cxQuotationRepository.findByFilters(productCategory,
-                productSubCategory,
-                brand,
-                stockKeepingUnit,
-                productName,
-                quantity,
-                pincode,
-                updatedBy,
-                expectedDeliveryDate,
-                parsedUpdatedDate);
+        List<CxQuotationResponseDto> responseList = new ArrayList<>();
 
-        if (quotationAllList.isEmpty()) {
-            throw new RuntimeException("No quotations found for the given criteria");
-        }
+        for (CxMaterialQuotationRequestHeader header : headers) {
 
-        return mapToDtoList(quotationAllList);
-    }
+            List<CxMaterialQuotationRequestHeaderDetails> detailsEntityList =
+                    cxQuotationHeaderDetailRepository.findByQuotationRequestLineIdStartingWith(header.getMaterialRequestId());
 
-    private List<CxQuotationResponseDto> mapToDtoList(List<CxQuotation> quotations) {
-        if (quotations == null || quotations.isEmpty()) {
-            return Collections.emptyList();
-        }
+            CxQuotationResponseDto.CxQuotationHeader responseHeader = CxQuotationResponseDto.CxQuotationHeader.builder()
+                    .materialRequestId(header.getMaterialRequestId())
+                    .requestDate(header.getRequestDate())
+                    .requestStatus(header.getRequestStatus())
+                    .materialRequestRequestedBy(header.getMaterialRequestRequestedBy())
+                    .build();
 
-        Map<String, List<CxQuotation>> groupedByRequestId = quotations.stream()
-                .collect(Collectors.groupingBy(CxQuotation::getRequestId));
-
-        return groupedByRequestId.entrySet().stream().map(entry -> {
-            List<CxQuotation> items = entry.getValue();
-            CxQuotation first = items.get(0);
-
-            List<CxQuotationResponseDto.QuotationItem> itemDtos = items.stream()
-                    .map(item -> CxQuotationResponseDto.QuotationItem.builder()
-                            .id(item.getId())
-                            .productCategory(item.getProductCategory())
-                            .productSubCategory(item.getProductSubCategory())
-                            .brand(item.getBrand())
-                            .stockKeepingUnit(item.getStockKeepingUnit())
-                            .productName(item.getProductName())
-                            .quantity(item.getQuantity())
+            List<CxQuotationResponseDto.CxQuotationHeaderDetail> responseDetails = detailsEntityList.stream()
+                    .map(detail -> CxQuotationResponseDto.CxQuotationHeaderDetail.builder()
+                            .quotationRequestLineId(detail.getQuotationRequestLineId())
+                            .quotationId(detail.getQuotationId())
+                            .productCategory(detail.getProductCategory())
+                            .productSubCategory(detail.getProductSubCategory())
+                            .brand(detail.getBrand())
+                            .sku(detail.getSku())
+                            .productName(detail.getProductName())
+                            .quantity(detail.getQuantity())
                             .build())
                     .collect(Collectors.toList());
 
-            return CxQuotationResponseDto.builder()
-                    .requestId(first.getRequestId())
-                    .expectedDeliveryDate(first.getExpectedDeliveryDate())
-                    .deliveryLocation(first.getDeliveryLocation())
-                    .pincode(first.getPincode())
-                    .updatedBy(first.getUpdatedBy())
-                    .updatedDate(first.getUpdatedDate())
-                    .itemList(itemDtos)
+            // Fetch customer details for getMyQuotation as well
+            CxQuotationResponseDto.CustomerDetails customerDetails = null;
+            if (header.getUpdatedBy() != null && !header.getUpdatedBy().isEmpty()) {
+                CustomerRegistration cust = customerRegistrationRepo.findByUserid(header.getUpdatedBy());
+                if (cust != null) {
+                    customerDetails = CxQuotationResponseDto.CustomerDetails.builder()
+                            .name(cust.getCustomerName())
+                            .email(cust.getUserEmail())
+                            .mobile(cust.getUserMobile())
+                            .userId(cust.getUserid())
+                            .userType(cust.getUserType())
+                            .regSource(cust.getRegSource())
+                            .build();
+                }
+            }
+
+            CxQuotationResponseDto responseDto = CxQuotationResponseDto.builder()
+                    .updatedBy(header.getUpdatedBy())
+                    .updatedDate(header.getUpdatedDate())
+                    .expectedDeliveryDate(header.getExpectedDeliveryDate())
+                    .deliveryLocation(header.getDeliveryLocation())
+                    .pincode(header.getPincode())
+                    .headerlist(List.of(responseHeader))
+                    .headerDetail(responseDetails)
+                    .customerDetails(customerDetails)
                     .build();
-        }).collect(Collectors.toList());
+
+            responseList.add(responseDto);
+        }
+        return responseList;
+    }
+
+    private int getNextSequenceNumber(String basePrefix) {
+        return cxQuotationRepository.findLastMaterialRequestId(basePrefix)
+                .map(lastId -> {
+                    try {
+                        String[] parts = lastId.split("_");
+                        return Integer.parseInt(parts[1]) + 1;
+                    } catch (Exception e) {
+                        return 1;
+                    }
+                })
+                .orElse(1);
     }
 }

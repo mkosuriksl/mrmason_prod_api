@@ -1,6 +1,9 @@
 package com.application.mrmason.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -11,15 +14,15 @@ import java.time.LocalDateTime;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name="cx_quotation")
-public class CxQuotation {
+@Table(name="cx_material_quotation_request_header_details")
+public class CxMaterialQuotationRequestHeaderDetails {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name="quotation_request_line_id")
+    private String quotationRequestLineId;
 
-    @Column(name = "request_id")
-    private String requestId;
+    @Column(name = "quotation_id")
+    private String quotationId;
 
     @Column(name = "product_category")
     private String productCategory;
@@ -30,8 +33,8 @@ public class CxQuotation {
     @Column(name = "brand")
     private String brand;
 
-    @Column(name = "stock_keeping_out")
-    private String stockKeepingUnit;
+    @Column(name = "sku")
+    private String sku;
 
     @Column(name = "product_name")
     private String productName;
@@ -39,18 +42,10 @@ public class CxQuotation {
     @Column(name = "quantity")
     private String quantity;
 
-    @Column(name = "expected_delievery_date")
-    private String expectedDeliveryDate;
-
-    @Column(name = "delivery_location")
-    private String deliveryLocation;
-
-    @Column(name = "pincode")
-    private String pincode;
-
     @Column(name = "updated_by")
     private String updatedBy;
 
     @Column(name = "updated_date")
     private LocalDateTime updatedDate;
+
 }

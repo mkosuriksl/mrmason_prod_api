@@ -2,17 +2,17 @@ package com.application.mrmason.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class MaterialSearchResultDTO {
+@EqualsAndHashCode
+public class MaterialItemDto { // Material category dto
 
-    private String sku;
-    private String brand;
+    private String skuId;
     private String modelNo;
     private String modelName;
-    private String materialCategory;
-    private String materialSubCategory;
+
 }
