@@ -46,7 +46,7 @@ public class AdminMaterialMasterController {
 		return new GenericResponse<>("Materials saved successfully", true, savedMaterials);
 	}
 
-	@PutMapping("/update")
+	@PutMapping("/updatebycategory")
 	public ResponseEntity<GenericResponse<List<AdminMaterialMaster>>> updateAdminMaterialMasters(
 			@RequestBody AdminMaterialMasterRequestDTO requestDTO, @RequestParam("regSource") RegSource regSource)
 			throws AccessDeniedException {
