@@ -27,26 +27,46 @@ import com.application.mrmason.dto.MaterialGroupDTO;
 import com.application.mrmason.dto.ResponseGetAdminMaterialMasterDto;
 import com.application.mrmason.entity.AdminMaterialMaster;
 import com.application.mrmason.enums.RegSource;
-import com.application.mrmason.service.AdminMaterialMasterService;
+import com.application.mrmason.service.AdminMaterialMasterBasedOnCategoryService;
 
 @RestController
 @RequestMapping("/admin-material-master")
-public class AdminMaterialMasterController {
+public class AdminMaterialMasterBasedOnCategoryController {
 
 	@Autowired
-	private AdminMaterialMasterService adminMaterialMasterService;
+	private AdminMaterialMasterBasedOnCategoryService adminMaterialMasterService;
 
-	@PostMapping("/add")
-	public GenericResponse<List<MaterialGroupDTO>> createMaterials(@RequestBody List<MaterialGroupDTO> materialGroups,
-			@RequestParam("regSource") RegSource regSource) throws AccessDeniedException {
+    @PostMapping
+    public ResponseEntity<?> createAdminMaterialMaster(
 
-		List<MaterialGroupDTO> savedMaterials = adminMaterialMasterService.createAdminMaterialMaster(materialGroups,
-				regSource);
+            @RequestParam("materialCategory")
+            String materialCategory,
 
-		return new GenericResponse<>("Materials saved successfully", true, savedMaterials);
-	}
+            @RequestParam("materialSubCategory")
+            String materialSubCategory,
 
-	@PutMapping("/updatebycategory")
+            @RequestParam("regSource")
+            RegSource regSource,
+
+            @RequestParam(value = "storeId", required = false)
+            String storeId,
+
+            @RequestBody
+            List<MaterialGroupDTO> requestGroups)
+
+            throws AccessDeniedException {
+
+        List<MaterialGroupDTO> result =
+                adminMaterialMasterService.createAdminMaterialMaster(
+                        requestGroups,
+                        materialCategory,
+                        materialSubCategory,
+                        regSource,
+                        storeId);
+
+        return ResponseEntity.ok(result);
+    }
+	@PutMapping("/update-by-category")
 	public ResponseEntity<GenericResponse<List<AdminMaterialMaster>>> updateAdminMaterialMasters(
 			@RequestBody AdminMaterialMasterRequestDTO requestDTO, @RequestParam("regSource") RegSource regSource)
 			throws AccessDeniedException {
@@ -58,7 +78,7 @@ public class AdminMaterialMasterController {
 		return ResponseEntity.ok(response);
 	}
 
-	@GetMapping("/get")
+	@GetMapping("/get-materials")
 	public ResponseEntity<ResponseGetAdminMaterialMasterDto> getServiceRequestPaintQuotationService(
 			@RequestParam(required = false) String materialCategory,
 			@RequestParam(required = false) String materialSubCategory, @RequestParam(required = false) String brand,
@@ -86,7 +106,7 @@ public class AdminMaterialMasterController {
 		return new ResponseEntity<>(response, HttpStatus.OK);
 	}
 
-	@PostMapping("upload_images")
+	@PostMapping("upload_mat_images")
 	public ResponseEntity<?> uploadCabDocs(@RequestParam("skuId") String skuId,
 			@RequestParam("regSource") RegSource regSource,
 			@RequestParam(value = "materialMasterImage1", required = false) MultipartFile materialMasterImage1,
@@ -99,7 +119,7 @@ public class AdminMaterialMasterController {
 				materialMasterImage3, materialMasterImage4, materialMasterImage5);
 	}
 
-	@GetMapping("/get-brand-by-materialcategory")
+	@GetMapping("/get-brands-by-materialcategory")
 	public ResponseEntity<List<String>> getDistinctLocations(@RequestParam String materialCategory,
 			@RequestParam String materialSubCategory,
 			@RequestParam(required = false) Map<String, String> requestParams) {
@@ -113,7 +133,7 @@ public class AdminMaterialMasterController {
 		return ResponseEntity.ok(distinctLocations); // Return 200 OK with the list of locations
 	}
 
-	@GetMapping("/distinct-material-category")
+	@GetMapping("/distinct-materials-category")
 	public ResponseEntity<List<Map<String, Object>>> getDistinctMaterialCategory() {
 	    List<Map<String, Object>> categories = adminMaterialMasterService.findDistinctMaterialCategoryWithSubCategory();
 	    return ResponseEntity.ok(categories);
@@ -123,7 +143,7 @@ public class AdminMaterialMasterController {
 //		return ResponseEntity.ok(types);
 //	}
 
-	@GetMapping("/home-search")
+	@GetMapping("/home-searching")
 	public AdminMaterialMasterResponseDTO searchMaterials(@RequestParam(required = false) String materialCategory,
 			@RequestParam(required = false) String materialSubCategory, @RequestParam(required = false) String brand,
 			@RequestParam(required = false) String location) {

@@ -16,10 +16,14 @@ import com.application.mrmason.dto.ResponseModel;
 import com.application.mrmason.entity.AdminMaterialMaster;
 import com.application.mrmason.enums.RegSource;
 
-public interface AdminMaterialMasterService {
-
-	public List<MaterialGroupDTO> createAdminMaterialMaster(List<MaterialGroupDTO> requestGroups, RegSource regSource)
-			throws AccessDeniedException;
+public interface AdminMaterialMasterBasedOnCategoryService {
+List<MaterialGroupDTO> createAdminMaterialMaster(
+            List<MaterialGroupDTO> requestGroups,
+            String materialCategory,
+            String materialSubCategory,
+            RegSource regSource,
+            String storeId)
+            throws AccessDeniedException;
 
 	List<AdminMaterialMaster> updateAdminMaterialMasters(List<AdminMaterialMaster> updatedList, RegSource regSource)
 			throws AccessDeniedException;

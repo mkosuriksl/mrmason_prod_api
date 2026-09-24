@@ -10,18 +10,10 @@ public interface StoreMasterService {
 
     List<StoreMaster> getAllStores();
 
-<<<<<<< HEAD
    
     StoreMaster updateStore(String storeId, StoreMaster storeMaster);
 
     void deleteStore(String storeId);
 
     List<StoreMaster> getMyStores();
-=======
-    StoreMaster getStoreById(String storeId);
-
-    StoreMaster updateStore(String storeId, StoreMaster storeMaster);
-
-    void deleteStore(String storeId);
->>>>>>> 9eb01aa08e6909cbd76547d5f9adfd2374a3a528
 }
