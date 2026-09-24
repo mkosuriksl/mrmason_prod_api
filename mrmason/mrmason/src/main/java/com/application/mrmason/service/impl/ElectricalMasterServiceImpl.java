@@ -24,7 +24,7 @@ import com.application.mrmason.service.ElectricalMasterService;
 
 @Service
 public class ElectricalMasterServiceImpl
-        implements ElectricalMasterService {
+        implements ElectricalMasterServices {
 
     // ============================================================
     // REPOSITORIES

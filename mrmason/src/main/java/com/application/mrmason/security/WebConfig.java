@@ -69,6 +69,7 @@ public class WebConfig {
 								"/admin-material-master/get_material_category",
 								"/admin-material-master/product_sku",
 								"/admin-material-master/get-product",
+								"/admin-material-master/get-category",
 								"api/super-admin/**").permitAll()
 						.requestMatchers("/api/quotation/get_all_quotation_info").hasAnyRole("MS", "Adm")
 						.requestMatchers("/api/admin-roles/create-role").hasAnyRole("SADM", "Adm")

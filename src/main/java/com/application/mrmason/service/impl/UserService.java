@@ -409,53 +409,54 @@ public class UserService {
 
 	public Userdto getServiceProfile(String email, RegSource regSource) {
 
-		Optional<User> user = userDAO.findByEmailAndRegSource(email, regSource);
-		List<SpServiceDetails> serviceDetails = detailsRepo.findByUserId(user.get().getBodSeqNo());
-
-		if (user.isPresent()) {
-			User userdb = user.get();
-
-			Userdto dto = new Userdto();
-			dto.setName(userdb.getName());
-			dto.setMobile(userdb.getMobile());
-			dto.setEmail(userdb.getEmail());
-			availabilityReo.findByBodSeqNos(user.get().getBodSeqNo())
-            .ifPresent(spa -> dto.setCurrentLocation(spa.getAddress()));
-			
-			dto.setAddress(userdb.getAddress());
-			dto.setCity(userdb.getCity());
-			dto.setDistrict(userdb.getDistrict());
-			dto.setState(userdb.getState());
-			dto.setLinkedInURL(userdb.getLinkedInURL());
-			dto.setHighestQualification(userdb.getHighestQualification());
-			dto.setLocation(userdb.getLocation());
-			dto.setRegSource(userdb.getRegSource().toString());
-			if (!serviceDetails.isEmpty()) {
-				SpServiceDetails sd = serviceDetails.get(0);
-				dto.setAvailableLocation(sd.getCity());
-			}
-			List<SpServiceDetails> serviceDetail= detailsRepo.findByUserIdAndStatus(user.get().getBodSeqNo(), "active");
-		    List<String> serviceTypes = serviceDetail.stream()
-		        .map(SpServiceDetails::getServiceType)
-		        .toList();
-		    
-		    dto.setServiceType(serviceTypes);
-		    userProfilemageRepository.findByBodSeqNo(user.get().getBodSeqNo()).ifPresent(upload -> dto.setPhoto(upload.getPhoto()));
-			
-			adminSpVerificationRepository.findByBodSeqNo(user.get().getBodSeqNo()).ifPresent(status -> dto.setVerifiedStatus(status.getStatus()));
-//			dto.setPincodeNo(userdb.getPincodeNo());
-			dto.setVerified(userdb.getVerified());
-			dto.setUserType(String.valueOf(userdb.getUserType()));
-			dto.setStatus(userdb.getStatus());
-			dto.setBusinessName(userdb.getBusinessName());
-			dto.setBodSeqNo(userdb.getBodSeqNo());
-			dto.setRegisteredDate(userdb.getRegisteredDate());
-			dto.setUpdatedDate(userdb.getUpdatedDate());
-			dto.setServiceCategory(userdb.getServiceCategory());
-			return dto;
+		Optional<User> userOp = userDAO.findByEmailAndRegSource(email, regSource);
+		if (userOp.isEmpty()) {
+			return null;
 		}
+		User user = userOp.get();
 
-		return null;
+		List<SpServiceDetails> serviceDetails = detailsRepo.findByUserId(user.getBodSeqNo());
+
+		User userdb = user;
+
+		Userdto dto = new Userdto();
+		dto.setName(userdb.getName());
+		dto.setMobile(userdb.getMobile());
+		dto.setEmail(userdb.getEmail());
+		availabilityReo.findByBodSeqNos(user.getBodSeqNo())
+            .ifPresent(spa -> dto.setCurrentLocation(spa.getAddress()));
+		
+		dto.setAddress(userdb.getAddress());
+		dto.setCity(userdb.getCity());
+		dto.setDistrict(userdb.getDistrict());
+		dto.setState(userdb.getState());
+		dto.setLinkedInURL(userdb.getLinkedInURL());
+		dto.setHighestQualification(userdb.getHighestQualification());
+		dto.setLocation(userdb.getLocation());
+		dto.setRegSource(userdb.getRegSource().toString());
+		if (!serviceDetails.isEmpty()) {
+			SpServiceDetails sd = serviceDetails.get(0);
+			dto.setAvailableLocation(sd.getCity());
+		}
+		List<SpServiceDetails> serviceDetail= detailsRepo.findByUserIdAndStatus(user.getBodSeqNo(), "active");
+	    List<String> serviceTypes = serviceDetail.stream()
+	        .map(SpServiceDetails::getServiceType)
+	        .toList();
+	    
+	    dto.setServiceType(serviceTypes);
+	    userProfilemageRepository.findByBodSeqNo(user.getBodSeqNo()).ifPresent(upload -> dto.setPhoto(upload.getPhoto()));
+		
+		adminSpVerificationRepository.findByBodSeqNo(user.getBodSeqNo()).ifPresent(status -> dto.setVerifiedStatus(status.getStatus()));
+//		dto.setPincodeNo(userdb.getPincodeNo());
+		dto.setVerified(userdb.getVerified());
+		dto.setUserType(String.valueOf(userdb.getUserType()));
+		dto.setStatus(userdb.getStatus());
+		dto.setBusinessName(userdb.getBusinessName());
+		dto.setBodSeqNo(userdb.getBodSeqNo());
+		dto.setRegisteredDate(userdb.getRegisteredDate());
+		dto.setUpdatedDate(userdb.getUpdatedDate());
+		dto.setServiceCategory(userdb.getServiceCategory());
+		return dto;
 
 	}
 

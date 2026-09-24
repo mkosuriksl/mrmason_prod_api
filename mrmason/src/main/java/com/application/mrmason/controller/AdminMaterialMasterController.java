@@ -189,4 +189,13 @@ public class AdminMaterialMasterController {
 			return ResponseEntity.ok(error);
 		}
 	}
+
+	@GetMapping("/get-category")
+	public ResponseEntity<MaterialCategoryHierarchyDto> getMaterialHierarchy(@RequestParam("category") String category) {
+		MaterialCategoryHierarchyDto response = adminMaterialMasterService.getMaterialHierarchyByCategory(category);
+		if (response == null) {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.ok(response);
+	}
 }

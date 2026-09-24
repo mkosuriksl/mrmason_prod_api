@@ -54,6 +54,22 @@ public class AWSConfig {
 			BUCKET_NAME = adminSecurity.getBucketName();
 			BASE_URL = adminSecurity.getBaseUrl();
 		}
+		// Use default credentials if not found in database (for dev/testing)
+		if (awsAccessKey == null || awsAccessKey.isEmpty()) {
+			awsAccessKey = System.getenv().getOrDefault("AWS_ACCESS_KEY_ID", "test-access-key");
+		}
+		if (awsSecretKey == null || awsSecretKey.isEmpty()) {
+			awsSecretKey = System.getenv().getOrDefault("AWS_SECRET_KEY", "test-secret-key");
+		}
+		if (region == null || region.isEmpty()) {
+			region = System.getenv().getOrDefault("AWS_REGION", "ap-south-1");
+		}
+		if (BUCKET_NAME == null || BUCKET_NAME.isEmpty()) {
+			BUCKET_NAME = System.getenv().getOrDefault("AWS_BUCKET_NAME", "test-bucket");
+		}
+		if (BASE_URL == null || BASE_URL.isEmpty()) {
+			BASE_URL = System.getenv().getOrDefault("AWS_BASE_URL", "https://test-bucket.s3.ap-south-1.amazonaws.com");
+		}
 		AwsBasicCredentials awsCreds = AwsBasicCredentials.create(awsAccessKey, awsSecretKey);
 
 		return S3Client.builder().credentialsProvider(StaticCredentialsProvider.create(awsCreds))

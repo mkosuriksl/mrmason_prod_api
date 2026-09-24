@@ -4,17 +4,14 @@ import com.application.mrmason.dto.CxQuotationRequestDto;
 import com.application.mrmason.dto.CxQuotationResponseDto;
 import com.application.mrmason.dto.GenericResponse;
 import com.application.mrmason.service.impl.CxQuotationServiceImpl;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -25,6 +22,7 @@ public class CxQuotationController {
 
     private final CxQuotationServiceImpl cxQuotationService;
 
+
     @PostMapping("/create")
     public ResponseEntity<GenericResponse<List<CxQuotationResponseDto>>>
                     createQuotation (@RequestBody List<CxQuotationRequestDto> dto){
@@ -33,7 +31,7 @@ public class CxQuotationController {
             List<CxQuotationResponseDto> responseData = cxQuotationService.createQuotation(dto);
 
             GenericResponse<List<CxQuotationResponseDto>> response = GenericResponse.<List<CxQuotationResponseDto>>builder()
-                    .message("Quotation created successfully")
+                    .message("Quotation request created successfully")
                     .success(true)
                     .data(responseData)
                     .build();
@@ -59,14 +57,14 @@ public class CxQuotationController {
             List<CxQuotationResponseDto> responseData = cxQuotationService.getMyQuotation(dto);
 
             GenericResponse<List<CxQuotationResponseDto>> response = GenericResponse.<List<CxQuotationResponseDto>>builder()
-                    .message("Quotation created successfully")
+                    .message("Fetched quotation request successfully")
                     .success(true)
                     .data(responseData)
                     .build();
             return ResponseEntity.ok(response);
         }catch (Exception ex) {
             GenericResponse<List<CxQuotationResponseDto>> errorResponse = GenericResponse.<List<CxQuotationResponseDto>>builder()
-                    .message("Failed to fetch quotations: " + ex.getMessage())
+                    .message("Failed to fetch quotations request: " + ex.getMessage())
                     .success(false)
                     .data(null)
                     .build();
@@ -99,7 +97,7 @@ public class CxQuotationController {
     }
 
     @GetMapping("get_all_quotation_info")
-    @PreAuthorize("hasAnyRole('Adm', ''MS)")
+    @PreAuthorize("hasAnyRole('Adm', 'MS')")
     public ResponseEntity<GenericResponse<List<CxQuotationResponseDto>>> getAllQuotations(String productCategory,
                                                                                           String productSubCategory,
                                                                                           String brand,

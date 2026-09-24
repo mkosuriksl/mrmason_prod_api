@@ -44,5 +44,5 @@ public interface ElectricalMasterRepository
             String storeId);
 
 
-	List<ElectricalMaster> findByStore_StoreIdAndUpdatedBy(String trim, String userId);
+
 }

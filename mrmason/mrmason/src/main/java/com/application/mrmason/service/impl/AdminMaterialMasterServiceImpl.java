@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.application.mrmason.dto.*;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -28,13 +29,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.application.mrmason.config.AWSConfig;
-import com.application.mrmason.dto.AdminDetailsDto;
-import com.application.mrmason.dto.AdminMaterialMasterResponseDTO;
-import com.application.mrmason.dto.AdminMaterialMasterResponseWithImageDto;
-import com.application.mrmason.dto.MaterialDTO;
-import com.application.mrmason.dto.MaterialGroupDTO;
-import com.application.mrmason.dto.MaterialSupplierDto;
-import com.application.mrmason.dto.ResponseModel;
 import com.application.mrmason.entity.AdminDetails;
 import com.application.mrmason.entity.AdminMaterialMaster;
 import com.application.mrmason.entity.MaterialMaster;
@@ -166,48 +160,6 @@ public class AdminMaterialMasterServiceImpl implements AdminMaterialMasterServic
 
 		return requestGroups;
 	}
-
-//	public List<MaterialGroupDTO> createAdminMaterialMaster(List<MaterialGroupDTO> requestGroups, RegSource regSource)
-//			throws AccessDeniedException {
-//
-//		UserInfo userInfo = getLoggedInUserInfo(regSource);
-//
-//		// 1. Flatten materials and generate SKU
-//		List<AdminMaterialMaster> entitiesToSave = new ArrayList<>();
-//		for (MaterialGroupDTO group : requestGroups) {
-//			for (MaterialDTO m : group.getMaterials()) {
-//				if (m.getSkuId() == null) {
-//
-//					String skuId = userInfo.userId + "_" + m.getSkuId();
-//					m.setSkuId(skuId);
-//				}
-//				// Create entity
-//				AdminMaterialMaster entity = new AdminMaterialMaster();
-//				entity.setSkuId(userInfo.userId + "_" + m.getSkuId());
-//				entity.setMaterialCategory(group.getMaterialCategory());
-//				entity.setMaterialSubCategory(group.getMaterialSubCategory());
-//				entity.setBrand(group.getBrand());
-//				entity.setModelNo(m.getModelNo());
-//				entity.setModelName(m.getModelName());
-//				entity.setShape(m.getShape());
-//				entity.setWidth(m.getWidth());
-//				entity.setLength(m.getLength());
-//				entity.setSize(m.getSize());
-//				entity.setThickness(m.getThickness());
-//				entity.setUpdatedBy(userInfo.userId);
-//				entity.setUpdatedDate(new Date());
-//				entity.setStatus("Active");
-//
-//				entitiesToSave.add(entity);
-//			}
-//		}
-//
-//		// 2. Save all materials
-//		adminMaterialMasterRepository.saveAll(entitiesToSave);
-//
-//		// 3. Return same grouped structure
-//		return requestGroups;
-//	}
 
 	private static class UserInfo {
 
@@ -384,7 +336,7 @@ public class AdminMaterialMasterServiceImpl implements AdminMaterialMasterServic
 
 	@Transactional
 	@Override
-	public ResponseEntity<ResponseModel> uploadDoc(RegSource regSource, String msCatmsSubCatmsBrandSkuId,
+	public ResponseEntity<ResponseModel> uploadDoc(RegSource regSource, String skuId,
 			MultipartFile materialMasterImage1, MultipartFile materialMasterImage2, MultipartFile materialMasterImage3,
 			MultipartFile materialMasterImage4, MultipartFile materialMasterImage5) throws AccessDeniedException {
 		UserInfo userInfo = getLoggedInUserInfo(regSource);
@@ -392,7 +344,7 @@ public class AdminMaterialMasterServiceImpl implements AdminMaterialMasterServic
 
 		// 1. Check if skuId exists in AdminMaterialMaster
 		Optional<MaterialMaster> adminMaterial = materialMasterRepository
-				.findByMsCatmsSubCatmsBrandSkuId(msCatmsSubCatmsBrandSkuId);
+				.findByMsCatmsSubCatmsBrandSkuId(skuId);
 		if (adminMaterial.isEmpty()) {
 			response.setError("true");
 			response.setMsg("SKU ID not found in AdminMaterialMaster.");
@@ -400,17 +352,17 @@ public class AdminMaterialMasterServiceImpl implements AdminMaterialMasterServic
 		}
 
 		// 2. Directory for S3
-		String directoryPath = "adminMaterialMaster/" + msCatmsSubCatmsBrandSkuId + "/";
+		String directoryPath = "adminMaterialMaster/" + skuId + "/";
 
 		// 3. Prepare new UploadMatericalMasterImages entity
 		UploadMatericalMasterImages uploadEntity = new UploadMatericalMasterImages();
 		UploadAdminMaterialMaster uploadAdminEntity = new UploadAdminMaterialMaster();
 
-		uploadEntity.setSkuId(msCatmsSubCatmsBrandSkuId);
+		uploadEntity.setSkuId(skuId);
 		uploadEntity.setUpdatedBy(userInfo.userId);
 		uploadEntity.setUpdatedDate(new Date());
 
-		uploadAdminEntity.setSkuId(msCatmsSubCatmsBrandSkuId);
+		uploadAdminEntity.setSkuId(skuId);
 		uploadAdminEntity.setUpdatedBy(userInfo.userId);
 		uploadAdminEntity.setUpdatedDate(new Date());
 
@@ -507,94 +459,87 @@ public class AdminMaterialMasterServiceImpl implements AdminMaterialMasterServic
 					Collections.emptyList());
 		}
 
-		List<AdminDetailsDto> adminDtos = new ArrayList<>();
-		List<MaterialSupplierDto> supplierDtos = new ArrayList<>();
-		Set<String> seenAdminIds = new HashSet<>();
-		Set<String> seenSupplierIds = new HashSet<>();
+		// Step 2: Fetch images for the materials
+		List<String> skuIds = materials.stream()
+				.map(m -> m.getMsCatmsSubCatmsBrandSkuId())
+				.toList();
 
-		// Step 2: Fetch all images for materials
-		List<String> skuIds = materials.stream().map(MaterialMaster::getMsCatmsSubCatmsBrandSkuId).toList();
-		List<UploadMatericalMasterImages> images = uploadMatericalMasterImagesRepository.findAllById(skuIds);
+		CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+		CriteriaQuery<UploadMatericalMasterImages> imgQuery = cb.createQuery(UploadMatericalMasterImages.class);
+		Root<UploadMatericalMasterImages> imgRoot = imgQuery.from(UploadMatericalMasterImages.class);
+		imgQuery.select(imgRoot).where(imgRoot.get("skuId").in(skuIds));
+		List<UploadMatericalMasterImages> images = entityManager.createQuery(imgQuery).getResultList();
 
-		// Map images by skuId
 		Map<String, UploadMatericalMasterImages> imageMap = images.stream()
 				.collect(Collectors.toMap(UploadMatericalMasterImages::getSkuId, img -> img));
 
-		// Step 3: Build final material DTO list with proper location filtering
-		List<AdminMaterialMasterResponseWithImageDto> materialDtos = new ArrayList<>();
+		// Step 3: Build response
+		List<AdminMaterialMasterResponseWithImageDto> masterList = new ArrayList<>();
+		List<AdminDetailsDto> adminList = new ArrayList<>();
+		List<MaterialSupplierDto> supplierList = new ArrayList<>();
 
-		for (MaterialMaster material : materials) {
-			String userId = material.getUpdatedBy();
+		for (MaterialMaster m : materials) {
+			AdminMaterialMasterResponseWithImageDto master = new AdminMaterialMasterResponseWithImageDto();
+			BeanUtils.copyProperties(m, master);
+			master.setSkuId(m.getMsCatmsSubCatmsBrandSkuId());
 
-			// Fetch supplier for this material
-			MaterialSupplierQuotationUser supplier = materialSupplierQuotationUserDAO.findByBodSeqNo(userId);
-
-			// Apply location filter if provided
-			if (location != null && !location.isEmpty()) {
-				if (supplier == null || !location.equalsIgnoreCase(supplier.getLocation())) {
-					continue; // skip this material if location doesn't match
-				}
-			}
-
-			// --- Map material + images ---
-			AdminMaterialMasterResponseWithImageDto dto = new AdminMaterialMasterResponseWithImageDto();
-			BeanUtils.copyProperties(material, dto);
-
-			// 👇 Fix skuId being null
-			dto.setSkuId(material.getMsCatmsSubCatmsBrandSkuId());
-
-			UploadMatericalMasterImages img = imageMap.get(material.getMsCatmsSubCatmsBrandSkuId());
+			UploadMatericalMasterImages img = imageMap.get(m.getMsCatmsSubCatmsBrandSkuId());
 			if (img != null) {
-				dto.setMaterialMasterImage1(img.getMaterialMasterImage1());
-				dto.setMaterialMasterImage2(img.getMaterialMasterImage2());
-				dto.setMaterialMasterImage3(img.getMaterialMasterImage3());
-				dto.setMaterialMasterImage4(img.getMaterialMasterImage4());
-				dto.setMaterialMasterImage5(img.getMaterialMasterImage5());
+				master.setMaterialMasterImage1(img.getMaterialMasterImage1());
+				master.setMaterialMasterImage2(img.getMaterialMasterImage2());
+				master.setMaterialMasterImage3(img.getMaterialMasterImage3());
+				master.setMaterialMasterImage4(img.getMaterialMasterImage4());
+				master.setMaterialMasterImage5(img.getMaterialMasterImage5());
 			}
 
-			materialDtos.add(dto);
-
-			// --- Admin details ---
-			AdminDetails user = adminRepo.findByAdminId(userId);
-			if (user != null && seenAdminIds.add(user.getAdminId())) {
-				adminDtos.add(toAdminDto(user));
-			}
-
-			// --- Supplier details ---
-			if (supplier != null && seenSupplierIds.add(supplier.getBodSeqNo())) {
-				supplierDtos.add(toSupplierDto(supplier));
-			}
+			masterList.add(master);
 		}
 
-		return new AdminMaterialMasterResponseDTO(materialDtos, adminDtos, supplierDtos);
+		return new AdminMaterialMasterResponseDTO(masterList, adminList, supplierList);
 	}
 
-	// --- Mapping helpers ---
-	private AdminDetailsDto toAdminDto(AdminDetails admin) {
-		AdminDetailsDto dto = new AdminDetailsDto();
-		dto.setId(admin.getId());
-		dto.setMobile(admin.getMobile());
-		dto.setEmail(admin.getEmail());
-		dto.setRegDate(admin.getRegDate());
-		dto.setStatus(admin.getStatus());
-		dto.setAdminId(admin.getAdminId());
-		dto.setAdminName(admin.getAdminName());
-		return dto;
+	@Override
+	public List<String> listAllMaterialMaster() {
+		// Get all distinct brands from MaterialMaster
+		return materialMasterRepository.findDistinctBrandByMaterialCategory(null, null);
 	}
 
-	private MaterialSupplierDto toSupplierDto(MaterialSupplierQuotationUser supplier) {
-		MaterialSupplierDto dto = new MaterialSupplierDto();
-		dto.setBodSeqNo(supplier.getBodSeqNo());
-		dto.setName(supplier.getName());
-		dto.setBusinessName(supplier.getBusinessName());
-		dto.setMobile(supplier.getMobile());
-		dto.setEmail(supplier.getEmail());
-		dto.setAddress(supplier.getAddress());
-		dto.setCity(supplier.getCity());
-		dto.setDistrict(supplier.getDistrict());
-		dto.setState(supplier.getState());
-		dto.setLocation(supplier.getLocation());
-		return dto;
+	@Override
+	public List<MaterialSearchResultDTO> searchMaterialMaster(String materialCategory, String materialSubCategory, String brand, String userInput) {
+		return adminMaterialMasterRepository.findMatchingModelNameAndSku(materialCategory, materialSubCategory, brand, userInput);
+	}
+
+	@Override
+	public List<MaterialMasterProductResponseDto> getProductBrandAndSku() {
+		return adminMaterialMasterRepository.findAllMaterial();
+	}
+
+	@Override
+	public MaterialCategoryHierarchyDto getMaterialHierarchyByCategory(String category) {
+		List<Object[]> rawItems = adminMaterialMasterRepository.findRawMaterialItemsByCategory(category);
+
+		// Group items by sub-category using a Map
+		Map<String, List<MaterialItemDto>> subCategoryMap = new LinkedHashMap<>();
+
+		for (Object[] row : rawItems) {
+			String sku = (String) row[0];
+			String brand = (String) row[1];
+			String modelNo = (String) row[2];
+			String modelName = (String) row[3];
+			String materialSubCategory = (String) row[4];
+
+			MaterialItemDto itemDto = new MaterialItemDto(sku, brand, modelNo, modelName, materialSubCategory);
+
+			subCategoryMap.computeIfAbsent(materialSubCategory, k -> new ArrayList<>()).add(itemDto);
+		}
+
+		// Build list of sub-category DTOs
+		List<MaterialSubCategoryDto> subCategories = new ArrayList<>();
+		for (Map.Entry<String, List<MaterialItemDto>> entry : subCategoryMap.entrySet()) {
+			subCategories.add(new MaterialSubCategoryDto(entry.getKey(), entry.getValue()));
+		}
+
+		return new MaterialCategoryHierarchyDto(category, subCategories);
 	}
 
 }

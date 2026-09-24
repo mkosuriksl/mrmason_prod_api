@@ -12,7 +12,9 @@ target/
 .settings
 .springBeans
 .sts4-cache
-
+.idea/compiler.xml
+.idea/misc.xml
+.idea/workspace.xml
 ### IntelliJ IDEA ###
 .idea
 *.iws
@@ -31,15 +33,12 @@ build/
 
 ### VS Code ###
 .vscode/
-<<<<<<< HEAD
-<<<<<<< Updated upstream
+
 application-local.properties
-=======
-application-local.properties
->>>>>>> Stashed changes
-=======
 .poolside
+# Ignore IntelliJ IDEA project files
+.idea/
+.idea/compiler.xml
+.idea/misc.xml
+.idea/workspace.xml
 
-
-application-second.properties
->>>>>>> 9eb01aa08e6909cbd76547d5f9adfd2374a3a528

@@ -21,7 +21,7 @@ public interface ElectricalMasterService {
     // ============================================================
 
     List<ElectricalMasterResponse> getForMs(
-            );
+    );
 
 
     // ============================================================
@@ -38,8 +38,5 @@ public interface ElectricalMasterService {
     // ============================================================
 
     List<ElectricalMasterResponse> getForAll();
-<<<<<<< Updated upstream:mrmason/src/main/java/com/application/mrmason/service/ElectricalMasterService.java
+
 }
-=======
-} 
->>>>>>> Stashed changes:mrmason/mrmason/src/main/java/com/application/mrmason/service/ElectricalMasterService.java

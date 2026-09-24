@@ -4,11 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class MaterialMasterProductResponseDto {
+public class MaterialCategoryHierarchyDto {
 
-    private String skuId;
-    private String brand;
+    private String category;
+    private List<MaterialSubCategoryDto> subCategories;
 }

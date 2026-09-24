@@ -3,12 +3,11 @@ package com.application.mrmason.service;
 import com.application.mrmason.dto.CxQuotationRequestDto;
 import com.application.mrmason.dto.CxQuotationResponseDto;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 public interface CxQuotationService {
 
-    List<CxQuotationResponseDto> createQuotation(List<CxQuotationRequestDto> dto);
+    List<CxQuotationResponseDto> createQuotation(List<CxQuotationRequestDto> dtoList);
 
     CxQuotationResponseDto updateQuotation(CxQuotationRequestDto dto);
 

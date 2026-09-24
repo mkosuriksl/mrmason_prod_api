@@ -120,142 +120,60 @@ public class UserService {
 		return userDAO.existsByMobile(mobile);
 	}
 
-	// @Transactional
-	// public Userdto addDetails(User user) {
-	// 	String encryptPassword = byCrypt.encode(user.getPassword());
-	// 	user.setPassword(encryptPassword);
+	@Transactional
+	public Userdto addDetails(User user) {
+		String encryptPassword = byCrypt.encode(user.getPassword());
+		user.setPassword(encryptPassword);
 
-	// 	// Email sending
-	// 	String subject = "Verify Your Email and Mobile Number";
-	// 	String emailMessage = "Thanks for registering with us. please verify your registered email and mobile.";
-	// 	emailService.sendEmail(user.getEmail(), subject, emailMessage);
-	// 	// Mobile sms sending
-	// 	String message = "Thanks for registering with us. please verify your registered email and mobile before login. - mekanik.in";
-	// 	smsService.registrationSendSMSMessage(user.getMobile(), message, user.getRegSource());
-	// 	User data = userDAO.save(user);
+		// Email sending
+		String subject = "Verify Your Email and Mobile Number";
+		String emailMessage = "Thanks for registering with us. please verify your registered email and mobile.";
+		emailService.sendEmail(user.getEmail(), subject, emailMessage);
+		// Mobile sms sending
+		String message = "Thanks for registering with us. please verify your registered email and mobile before login. - mekanik.in";
+		smsService.registrationSendSMSMessage(user.getMobile(), message, user.getRegSource());
+		User data = userDAO.save(user);
 
-	// 	ServicePersonLogin service = new ServicePersonLogin();
-	// 	service.setEmail(user.getEmail());
-	// 	service.setMobile(user.getMobile());
-	// 	service.setMobVerify("no");
-	// 	service.setEVerify("no");
-	// 	service.setRegSource(user.getRegSource());
-	// 	serviceLoginRepo.save(service);
+		ServicePersonLogin service = new ServicePersonLogin();
+		service.setEmail(user.getEmail());
+		service.setMobile(user.getMobile());
+		service.setMobVerify("no");
+		service.setEVerify("no");
+		service.setRegSource(user.getRegSource());
+		serviceLoginRepo.save(service);
 		
-	// 	AdminSpVerification verification = new AdminSpVerification();
-	//     verification.setBodSeqNo(data.getBodSeqNo());
-	//     verification.setStatus("new");
-	//     verification.setComment("");
-	//     verification.setUpdateBy(data.getBodSeqNo()); // or pass admin if available
-	//     verification.setUpdatedDate(new Date());
-	//     adminSpVerificationRepository.save(verification);
+		AdminSpVerification verification = new AdminSpVerification();
+	    verification.setBodSeqNo(data.getBodSeqNo());
+	    verification.setStatus("new");
+	    verification.setComment("");
+	    verification.setUpdateBy(data.getBodSeqNo()); // or pass admin if available
+	    verification.setUpdatedDate(new Date());
+	    adminSpVerificationRepository.save(verification);
 
-	// 	Userdto dto = new Userdto();
-	// 	dto.setName(user.getName());
-	// 	dto.setMobile(user.getMobile());
-	// 	dto.setEmail(user.getEmail());
-	// 	dto.setAddress(user.getAddress());
-	// 	dto.setCity(user.getCity());
-	// 	dto.setDistrict(user.getDistrict());
-	// 	dto.setState(user.getState());
-	// 	dto.setLocation(user.getLocation());
-	// 	dto.setVerified(user.getVerified());
-	// 	dto.setUserType(String.valueOf(data.getUserType()));
-	// 	dto.setStatus(user.getStatus());
-	// 	dto.setBusinessName(user.getBusinessName());
-	// 	dto.setBodSeqNo(user.getBodSeqNo());
-	// 	dto.setRegisteredDate(user.getRegisteredDate());
-	// 	dto.setUpdatedDate(user.getUpdatedDate());
-	// 	dto.setServiceCategory(user.getServiceCategory());
-	// 	dto.setRegSource(user.getRegSource().toString());
-	// 	dto.setLinkedInURL(user.getLinkedInURL());
-	// 	dto.setHighestQualification(user.getHighestQualification());
+		Userdto dto = new Userdto();
+		dto.setName(user.getName());
+		dto.setMobile(user.getMobile());
+		dto.setEmail(user.getEmail());
+		dto.setAddress(user.getAddress());
+		dto.setCity(user.getCity());
+		dto.setDistrict(user.getDistrict());
+		dto.setState(user.getState());
+		dto.setLocation(user.getLocation());
+		dto.setVerified(user.getVerified());
+		dto.setUserType(String.valueOf(data.getUserType()));
+		dto.setStatus(user.getStatus());
+		dto.setBusinessName(user.getBusinessName());
+		dto.setBodSeqNo(user.getBodSeqNo());
+		dto.setRegisteredDate(user.getRegisteredDate());
+		dto.setUpdatedDate(user.getUpdatedDate());
+		dto.setServiceCategory(user.getServiceCategory());
+		dto.setRegSource(user.getRegSource().toString());
+		dto.setLinkedInURL(user.getLinkedInURL());
+		dto.setHighestQualification(user.getHighestQualification());
 
-	// 	return dto;
+		return dto;
 
-	// }
-        @Transactional
-public Userdto addDetails(User user) {
-
-    // 1. Encrypt password
-    String encryptPassword = byCrypt.encode(user.getPassword());
-    user.setPassword(encryptPassword);
-
-    // 2. Save User first
-    User data = userDAO.save(user);
-
-    // 3. Create ServicePersonLogin record
-    ServicePersonLogin service = new ServicePersonLogin();
-
-    service.setEmail(data.getEmail());
-    service.setMobile(data.getMobile());
-    service.setMobVerify("no");
-    service.setEVerify("no");
-    service.setRegSource(data.getRegSource());
-
-    serviceLoginRepo.save(service);
-
-    // 4. Generate EMAIL OTP
-    // ServicePersonLogin must already exist before this call
-    otpService.generateOtp(
-            data.getEmail(),
-            data.getRegSource()
-    );
-
-    // 5. Send mobile verification SMS
-    String message =
-            "Thanks for registering with us. Please verify your registered email and mobile before login. - mekanik.in";
-
-    smsService.registrationSendSMSMessage(
-            data.getMobile(),
-            message,
-            data.getRegSource()
-    );
-
-    // 6. Create Admin SP verification record
-    AdminSpVerification verification = new AdminSpVerification();
-
-    verification.setBodSeqNo(data.getBodSeqNo());
-    verification.setStatus("new");
-    verification.setComment("");
-    verification.setUpdateBy(data.getBodSeqNo());
-    verification.setUpdatedDate(new Date());
-
-    adminSpVerificationRepository.save(verification);
-
-    // 7. Prepare response
-    Userdto dto = new Userdto();
-
-    dto.setName(data.getName());
-    dto.setMobile(data.getMobile());
-    dto.setEmail(data.getEmail());
-    dto.setAddress(data.getAddress());
-    dto.setCity(data.getCity());
-    dto.setDistrict(data.getDistrict());
-    dto.setState(data.getState());
-    dto.setLocation(data.getLocation());
-    dto.setVerified(data.getVerified());
-    dto.setUserType(
-            data.getUserType() != null
-                    ? data.getUserType().toString()
-                    : null
-    );
-    dto.setStatus(data.getStatus());
-    dto.setBusinessName(data.getBusinessName());
-    dto.setBodSeqNo(data.getBodSeqNo());
-    dto.setRegisteredDate(data.getRegisteredDate());
-    dto.setUpdatedDate(data.getUpdatedDate());
-    dto.setServiceCategory(data.getServiceCategory());
-    dto.setRegSource(
-            data.getRegSource() != null
-                    ? data.getRegSource().toString()
-                    : null
-    );
-    dto.setLinkedInURL(data.getLinkedInURL());
-    dto.setHighestQualification(data.getHighestQualification());
-
-    return dto;
-}
+	}
 
 	public User updateDataWithEmail(String email) {
 		Optional<User> existedByEmail = Optional.of(userDAO.findByEmail(email));
@@ -491,53 +409,54 @@ public Userdto addDetails(User user) {
 
 	public Userdto getServiceProfile(String email, RegSource regSource) {
 
-		Optional<User> user = userDAO.findByEmailAndRegSource(email, regSource);
-		List<SpServiceDetails> serviceDetails = detailsRepo.findByUserId(user.get().getBodSeqNo());
-
-		if (user.isPresent()) {
-			User userdb = user.get();
-
-			Userdto dto = new Userdto();
-			dto.setName(userdb.getName());
-			dto.setMobile(userdb.getMobile());
-			dto.setEmail(userdb.getEmail());
-			availabilityReo.findByBodSeqNos(user.get().getBodSeqNo())
-            .ifPresent(spa -> dto.setCurrentLocation(spa.getAddress()));
-			
-			dto.setAddress(userdb.getAddress());
-			dto.setCity(userdb.getCity());
-			dto.setDistrict(userdb.getDistrict());
-			dto.setState(userdb.getState());
-			dto.setLinkedInURL(userdb.getLinkedInURL());
-			dto.setHighestQualification(userdb.getHighestQualification());
-			dto.setLocation(userdb.getLocation());
-			dto.setRegSource(userdb.getRegSource().toString());
-			if (!serviceDetails.isEmpty()) {
-				SpServiceDetails sd = serviceDetails.get(0);
-				dto.setAvailableLocation(sd.getCity());
-			}
-			List<SpServiceDetails> serviceDetail= detailsRepo.findByUserIdAndStatus(user.get().getBodSeqNo(), "active");
-		    List<String> serviceTypes = serviceDetail.stream()
-		        .map(SpServiceDetails::getServiceType)
-		        .toList();
-		    
-		    dto.setServiceType(serviceTypes);
-		    userProfilemageRepository.findByBodSeqNo(user.get().getBodSeqNo()).ifPresent(upload -> dto.setPhoto(upload.getPhoto()));
-			
-			adminSpVerificationRepository.findByBodSeqNo(user.get().getBodSeqNo()).ifPresent(status -> dto.setVerifiedStatus(status.getStatus()));
-//			dto.setPincodeNo(userdb.getPincodeNo());
-			dto.setVerified(userdb.getVerified());
-			dto.setUserType(String.valueOf(userdb.getUserType()));
-			dto.setStatus(userdb.getStatus());
-			dto.setBusinessName(userdb.getBusinessName());
-			dto.setBodSeqNo(userdb.getBodSeqNo());
-			dto.setRegisteredDate(userdb.getRegisteredDate());
-			dto.setUpdatedDate(userdb.getUpdatedDate());
-			dto.setServiceCategory(userdb.getServiceCategory());
-			return dto;
+		Optional<User> userOp = userDAO.findByEmailAndRegSource(email, regSource);
+		if (userOp.isEmpty()) {
+			return null;
 		}
+		User user = userOp.get();
 
-		return null;
+		List<SpServiceDetails> serviceDetails = detailsRepo.findByUserId(user.getBodSeqNo());
+
+		User userdb = user;
+
+		Userdto dto = new Userdto();
+		dto.setName(userdb.getName());
+		dto.setMobile(userdb.getMobile());
+		dto.setEmail(userdb.getEmail());
+		availabilityReo.findByBodSeqNos(user.getBodSeqNo())
+            .ifPresent(spa -> dto.setCurrentLocation(spa.getAddress()));
+		
+		dto.setAddress(userdb.getAddress());
+		dto.setCity(userdb.getCity());
+		dto.setDistrict(userdb.getDistrict());
+		dto.setState(userdb.getState());
+		dto.setLinkedInURL(userdb.getLinkedInURL());
+		dto.setHighestQualification(userdb.getHighestQualification());
+		dto.setLocation(userdb.getLocation());
+		dto.setRegSource(userdb.getRegSource().toString());
+		if (!serviceDetails.isEmpty()) {
+			SpServiceDetails sd = serviceDetails.get(0);
+			dto.setAvailableLocation(sd.getCity());
+		}
+		List<SpServiceDetails> serviceDetail= detailsRepo.findByUserIdAndStatus(user.getBodSeqNo(), "active");
+	    List<String> serviceTypes = serviceDetail.stream()
+	        .map(SpServiceDetails::getServiceType)
+	        .toList();
+	    
+	    dto.setServiceType(serviceTypes);
+	    userProfilemageRepository.findByBodSeqNo(user.getBodSeqNo()).ifPresent(upload -> dto.setPhoto(upload.getPhoto()));
+		
+		adminSpVerificationRepository.findByBodSeqNo(user.getBodSeqNo()).ifPresent(status -> dto.setVerifiedStatus(status.getStatus()));
+//		dto.setPincodeNo(userdb.getPincodeNo());
+		dto.setVerified(userdb.getVerified());
+		dto.setUserType(String.valueOf(userdb.getUserType()));
+		dto.setStatus(userdb.getStatus());
+		dto.setBusinessName(userdb.getBusinessName());
+		dto.setBodSeqNo(userdb.getBodSeqNo());
+		dto.setRegisteredDate(userdb.getRegisteredDate());
+		dto.setUpdatedDate(userdb.getUpdatedDate());
+		dto.setServiceCategory(userdb.getServiceCategory());
+		return dto;
 
 	}
 
@@ -663,78 +582,94 @@ public Userdto addDetails(User user) {
 	}
 
 
-	public ResponseSpLoginDto loginDetails(LoginRequest login) {
-
-		Optional<ServicePersonLogin> loginDb = emailLoginRepo.findByEmailOrMobileAndRegSource(login.getEmail(),
-				login.getMobile(), login.getRegSource());
+	public ResponseSpLoginDto loginDetails(LoginRequest login, RegSource regSource) {
 		ResponseSpLoginDto response = new ResponseSpLoginDto();
 
-		if (loginDb.isPresent()) {
-			Optional<User> userEmailMobile = userDAO.findByEmailOrMobileAndRegSource(login.getEmail(),
-					login.getMobile(), login.getRegSource());
-			User user = userEmailMobile.get();
-			String status = user.getStatus();
+		String email = (login.getEmail() != null) ? login.getEmail().trim() : null;
+		String mobile = (login.getMobile() != null) ? login.getMobile().trim() : null;
 
-			if (userEmailMobile.isPresent()) {
-				if (status != null && status.equalsIgnoreCase("active")) {
-					if (login.getEmail() != null && login.getMobile() == null) {
-						if (loginDb.get().getEVerify().equalsIgnoreCase("yes")) {
+		if (regSource == null) {
+			response.setMessage("regSource parameter is required");
+			response.setStatus(false);
+			return response;
+		}
 
-							if (byCrypt.matches(login.getPassword(), user.getPassword())) {
-								String jwtToken = jwtService.generateToken(userEmailMobile.get(), user.getBodSeqNo());
-								response.setJwtToken(jwtToken);
-								response.setMessage("Login Successful.");
-								response.setStatus(true);
-								response.setLoginDetails(getServiceProfile(login.getEmail(), login.getRegSource()));
-								return response;
-							} else {
-								response.setMessage("Invalid Password");
-								response.setStatus(false);
-								return response;
-							}
-						} else {
-							response.setMessage("verify Email");
-							response.setStatus(false);
-							return response;
-						}
-					} else if (login.getEmail() == null && login.getMobile() != null) {
-						if (loginDb.get().getMobVerify().equalsIgnoreCase("yes")) {
+		Optional<ServicePersonLogin> loginDb = Optional.empty();
 
-							if (byCrypt.matches(login.getPassword(), user.getPassword())) {
-								String jwtToken = jwtService.generateToken(userEmailMobile.get(), user.getBodSeqNo());
-								response.setJwtToken(jwtToken);
-								response.setMessage("Login Successful.");
-								response.setStatus(true);
-								response.setLoginDetails(
-										getServiceProfile(loginDb.get().getEmail(), login.getRegSource()));
-								return response;
-							} else {
-								response.setMessage("Invalid Password");
-								response.setStatus(false);
-								return response;
-							}
-						} else {
-							response.setMessage("verify Mobile");
-							response.setStatus(false);
-							return response;
-						}
-					}
-				} else {
-					response.setMessage("Account status : " + user.getStatus());
-					response.setStatus(false);
-					return response;
-				}
-			} else {
-				response.setMessage("Inactive User");
+		if (email != null && !email.isEmpty()) {
+			List<ServicePersonLogin> list = emailLoginRepo.findByUserEmailAndRegSource(email, regSource);
+			if (!list.isEmpty()) {
+				loginDb = Optional.of(list.get(0));
+			}
+		} else if (mobile != null && !mobile.isEmpty()) {
+			List<ServicePersonLogin> list = emailLoginRepo.findByUserMobileAndRegSource(mobile, regSource);
+			if (!list.isEmpty()) {
+				loginDb = Optional.of(list.get(0));
+			}
+		}
+
+		if (loginDb.isEmpty()) {
+			response.setMessage("Invalid user for registration source: " + regSource);
+			response.setStatus(false);
+			return response;
+		}
+
+		ServicePersonLogin spLogin = loginDb.get();
+
+		Optional<User> userDb = Optional.empty();
+
+		if (email != null && !email.isEmpty()) {
+			userDb = userDAO.findByEmailAndRegSource(email, regSource);
+		} else if (mobile != null && !mobile.isEmpty()) {
+			userDb = userDAO.findByMobileAndRegSource(mobile, regSource);
+		}
+
+		if (userDb.isEmpty()) {
+			response.setMessage("Inactive User");
+			response.setStatus(false);
+			return response;
+		}
+
+		User user = userDb.get();
+
+		if (!"active".equalsIgnoreCase(user.getStatus())) {
+			response.setMessage("Account status : " + user.getStatus());
+			response.setStatus(false);
+			return response;
+		}
+
+		if (email != null && !email.isEmpty()) {
+			if (!"yes".equalsIgnoreCase(spLogin.getEVerify())) {
+				response.setMessage("verify Email");
 				response.setStatus(false);
 				return response;
 			}
-
+		} else if (mobile != null && !mobile.isEmpty()) {
+			if (!"yes".equalsIgnoreCase(spLogin.getMobVerify())) {
+				response.setMessage("verify Mobile");
+				response.setStatus(false);
+				return response;
+			}
 		}
-		response.setMessage("Invalid User.!");
-		response.setStatus(false);
-		return response;
+
+		if (byCrypt.matches(login.getPassword(), user.getPassword())) {
+			String jwtToken = jwtService.generateToken(user, user.getBodSeqNo());
+
+			response.setJwtToken(jwtToken);
+			response.setMessage("Login Successful.");
+			response.setStatus(true);
+
+			String identifier = (email != null && !email.isEmpty()) ? email : spLogin.getEmail();
+			response.setLoginDetails(getServiceProfile(identifier, regSource));
+
+			return response;
+		} else {
+			response.setMessage("Invalid Password");
+			response.setStatus(false);
+			return response;
+		}
 	}
+
 
 	public User getServiceDataProfile(String email) {
 
@@ -746,7 +681,6 @@ public Userdto addDetails(User user) {
 	public ResponseMessageDto servicePersonDeleteAccount(DeleteAccountRequest accountRequest) {
 		ResponseMessageDto response = new ResponseMessageDto();
 
-		// Retrieve the user based on the given ID
 		User user = userDAO.findByBodSeqNo(accountRequest.getSpId());
 		if (user == null) {
 			response.setMessage("Account not found.");
