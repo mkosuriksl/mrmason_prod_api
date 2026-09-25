@@ -7,6 +7,7 @@ import java.util.Date;
 import com.application.mrmason.enums.OrderStatus;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -64,23 +65,28 @@ public class CustomerOrderDetailsEntity {
     private BigDecimal width;
 	
 	@Column(name = "size")
-	  private BigDecimal size;
+	private BigDecimal size;
 	
 	@Column(name = "thickness")
 	private BigDecimal thickness;
 
+	@JsonIgnore
 	@Column(name = "updated_date")
 	private Date updatedDate;
 
+	@JsonIgnore
 	@Column(name = "updatedBy")
 	private String updatedBy;
 
+	@JsonIgnore
 	@Column(name = "delivery_date")
 	private LocalDate deliveryDate;
 
+	@JsonIgnore
 	@Column(name = "delivery_location")
 	private String deliveryLocation;
 
+	@JsonIgnore
 	@Column(name = "pincode")
 	private String pincode;
 

@@ -1,5 +1,8 @@
 package com.application.mrmason.service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -8,17 +11,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.application.mrmason.dto.*;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import com.application.mrmason.dto.CustomerGetOrderResponseDTO;
-import com.application.mrmason.dto.CustomerOrderDetailsDto;
-import com.application.mrmason.dto.CustomerOrderDetailsRepo;
-import com.application.mrmason.dto.CustomerOrderHdrRepo;
-import com.application.mrmason.dto.CustomerOrderRequestDto;
-import com.application.mrmason.dto.GenericResponse;
-import com.application.mrmason.dto.UpdateCustomerOrderRequestDto;
 import com.application.mrmason.entity.AdminMaterialMaster;
 import com.application.mrmason.entity.CustomerOrderDetailsEntity;
 import com.application.mrmason.entity.CustomerOrderHdrEntity;
@@ -60,11 +58,12 @@ public class CustomerOrderMethodHandler {
 	@Autowired
 	private MaterialMasterRepository materialMasterRepository;
 
-	public CustomerOrderHdrEntity ceateCustomerOrderMethod(CustomerOrderRequestDto dto) {
+	public CustomerOrderHdrEntity createCustomerOrderMethod(CustomerOrderRequestDto dto) {
 
 		String loggedInUserEmail = AuthDetailsProvider.getLoggedEmail();
 		Optional<CustomerRegistration> login = customerRegisterRepository
 				.findByUserEmailAndUserTypeAndRegSource(loggedInUserEmail, UserType.EC, RegSource.MRMASON);
+		String userId = login.get().getUserid();
 		if (login.isEmpty()) {
 			throw new ResourceNotFoundException("Access denied. This API is restricted to customer users only.");
 		}
@@ -98,14 +97,18 @@ public class CustomerOrderMethodHandler {
 		} else {
 			// ✅ Create new header
 			orderHdr = new CustomerOrderHdrEntity();
+
+			Date date = new Date();
 			orderHdr.setStatus(OrderStatus.PENDING);
-//			orderHdr.setSkuIdUserId(dto.getOrderDetailsList().get(0).getSkuIdUserId());
-			orderHdr.setOrderDate(new Date());
+            orderHdr.setOrderDate(date);
+			orderHdr.setOrderUpdatedBy(userId);
+			orderHdr.setOrderUpdatedDate(date);
 			orderHdr.setUpdatedBy(login.get().getUserid());
 			orderHdr.setUpdatedDate(new Date());
 			orderHdr.setDeliveryDate(dto.getDeliveryDate());
 			orderHdr.setDeliveryLocation(dto.getDeliveryLocation());
 			orderHdr.setPincode(dto.getPincode());
+//			orderHdr.setSkuIdUserId(dto.getOrderDetailsList().get(0).getSkuIdUserId());
 
 			orderHdrRepo.save(orderHdr);
 
@@ -147,10 +150,14 @@ public class CustomerOrderMethodHandler {
 			orderDetailsEntity.setDiscount(orderDetails.getDiscount());
 			orderDetailsEntity.setGst(orderDetails.getGst());
 			orderDetailsEntity.setTotal(orderDetails.getTotal());
+			orderDetailsEntity.setShape(orderDetails.getShape());
+			orderDetailsEntity.setWidth(orderDetails.getWidth());
+			orderDetailsEntity.setSize(orderDetails.getSize());
+			orderDetailsEntity.setThickness(orderDetails.getThickness());
 			orderDetailsEntity.setOrderQty(orderDetails.getOrderQty());
-			orderDetailsEntity.setDeliveryDate(orderDetails.getDeliveryDate());
-			orderDetailsEntity.setDeliveryLocation(orderDetails.getDeliveryLocation());
-			orderDetailsEntity.setPincode(orderDetails.getPincode());
+			orderDetailsEntity.setDeliveryDate(orderHdr.getDeliveryDate());
+			orderDetailsEntity.setDeliveryLocation(orderHdr.getDeliveryLocation());
+			orderDetailsEntity.setPincode(orderHdr.getPincode());
 
 //		    orderDetailsEntity.setPrescriptionRequired(orderDetails.getPrescriptionRequired());
 
@@ -158,15 +165,12 @@ public class CustomerOrderMethodHandler {
 			orderDetailsEntity.setMaterialCategory(stockEntity.getMaterialCategory());
 			orderDetailsEntity.setMaterialSubCategory(stockEntity.getMaterialSubCategory());
 			orderDetailsEntity.setModelName(stockEntity.getModelName());
-			orderDetailsEntity.setShape(stockEntity.getShape());
-			orderDetailsEntity.setWidth(stockEntity.getWidth());
-			orderDetailsEntity.setSize(stockEntity.getSize());
-			orderDetailsEntity.setThickness(stockEntity.getThickness());
 			orderDetailsEntity.setOrderlineId(baseOrderId + "_" + String.format("%03d", counter++));
 			orderDetailsEntity.setStatus(OrderStatus.PENDING);
-			orderDetailsEntity.setCustomerOrderOrderHdrEntity(orderHdr);
 			orderDetailsEntity.setUpdatedBy(login.get().getUserid());
 			orderDetailsEntity.setUpdatedDate(new Date());
+
+			orderDetailsEntity.setCustomerOrderOrderHdrEntity(orderHdr);
 
 			detailEntities.add(orderDetailsEntity);
 			orderDetailsRepo.save(orderDetailsEntity);
@@ -181,10 +185,33 @@ public class CustomerOrderMethodHandler {
 		return orderHdr;
 	}
 
-	public List<CustomerOrderDetailsEntity> updateOrderDetails(UpdateCustomerOrderRequestDto dto) {
+	public UpdateCustomerOrderResponseDto updateOrderDetails(UpdateCustomerOrderRequestDto dto) {
 		String orderId = dto.getOrderId();
+
+		String loggedInUserEmail = AuthDetailsProvider.getLoggedEmail();
+		Optional<CustomerRegistration> login = customerRegisterRepository
+				.findByUserEmailAndUserTypeAndRegSource(loggedInUserEmail, UserType.EC, RegSource.MRMASON);
+
+		if (login.isEmpty()) {
+			throw new ResourceNotFoundException("Access denied. This API is restricted to customer users only.");
+		}
+
+		String userId = login.get().getUserid();
+		Date currentDate = new Date();
+
+		// 1️⃣ Update Header audit details if header exists
+		CustomerOrderHdrEntity orderHdr = orderHdrRepo.findById(orderId)
+				.orElseThrow(() -> new RuntimeException("OrderId not found: " + orderId));
+
+		orderHdr.setUpdatedBy(userId);
+		orderHdr.setUpdatedDate(currentDate);
+		orderHdr.setOrderUpdatedBy(userId);
+		orderHdr.setOrderUpdatedDate(currentDate);
+		orderHdrRepo.save(orderHdr);
+
 		List<CustomerOrderDetailsEntity> updatedEntities = new ArrayList<>();
 
+		// 2️⃣ Update Line Items
 		for (CustomerOrderDetailsDto details : dto.getOrderDetailsList()) {
 			String orderlineId = details.getOrderlineId();
 
@@ -201,15 +228,31 @@ public class CustomerOrderMethodHandler {
 			CustomerOrderDetailsEntity entity = orderDetailsRepo.findByOrderlineId(orderlineId)
 					.orElseThrow(() -> new RuntimeException("OrderLineId not found: " + orderlineId));
 
-			// Update fields
-			entity.setOrderQty(details.getOrderQty());
-			entity.setTotal(details.getTotal());
+			if (details.getOrderQty() != null) entity.setOrderQty(details.getOrderQty());
+			if (details.getTotal() != null) entity.setTotal(details.getTotal());
+			if (details.getMrp() != null) entity.setMrp(details.getMrp());
+			if (details.getDiscount() != null) entity.setDiscount(details.getDiscount());
+			if (details.getGst() != null) entity.setGst(details.getGst());
+			if (details.getBrand() != null) entity.setBrand(details.getBrand());
+			if (details.getShape() != null) entity.setShape(details.getShape());
+			if (details.getWidth() != null) entity.setWidth(details.getWidth());
+			if (details.getSize() != null) entity.setSize(details.getSize());
+			if (details.getThickness() != null) entity.setThickness(details.getThickness());
+
+
+			entity.setUpdatedBy(userId);
+			entity.setUpdatedDate(currentDate);
+
 			CustomerOrderDetailsEntity saved = orderDetailsRepo.save(entity);
 			updatedEntities.add(saved);
 		}
+		List<CustomerOrderDetailsDto> dtoList = updatedEntities.stream()
+				.map(e -> modelMapper.map(e, CustomerOrderDetailsDto.class))
+				.collect(Collectors.toList());
 
-		return updatedEntities;
+		return new UpdateCustomerOrderResponseDto(orderId, userId, currentDate, dtoList);
 	}
+
 
 	@Transactional
 	public GenericResponse<List<CustomerGetOrderResponseDTO>> getOrderDetail(String customerId, String orderid,
@@ -234,9 +277,16 @@ public class CustomerOrderMethodHandler {
 			String orderIdKey = entry.getKey();
 			List<CustomerOrderDetailsEntity> orderDetailsEntities = entry.getValue();
 
+			CustomerOrderHdrEntity headerEntity = orderDetailsEntities.get(0).getCustomerOrderOrderHdrEntity();
+
 			CustomerGetOrderResponseDTO dto = new CustomerGetOrderResponseDTO();
 			dto.setOrderId(orderIdKey);
-			dto.setCustomerId(orderDetailsEntities.get(0).getUpdatedBy());
+			dto.setDeliveryDate(headerEntity.getDeliveryDate());
+			dto.setDeliveryLocation(headerEntity.getDeliveryLocation());
+			dto.setPincode(headerEntity.getPincode());
+			dto.setCustomerId(headerEntity.getUpdatedBy());
+			dto.setUpdatedBy(headerEntity.getUpdatedBy());
+			dto.setUpdatedDate(headerEntity.getUpdatedDate());
 			dto.setOrderDetailsList(orderDetailsEntities.stream()
 					.map(e -> modelMapper.map(e, CustomerOrderDetailsDto.class)).collect(Collectors.toList()));
 
@@ -355,6 +405,11 @@ public class CustomerOrderMethodHandler {
 			CustomerGetOrderResponseDTO dto = new CustomerGetOrderResponseDTO();
 			dto.setOrderId(orderIdKey);
 			dto.setCustomerId(orderDetailsEntities.get(0).getCustomerOrderOrderHdrEntity().getUpdatedBy());
+			dto.setDeliveryDate(orderDetailsEntities.get(0).getDeliveryDate());
+			dto.setDeliveryLocation(orderDetailsEntities.get(0).getDeliveryLocation());
+			dto.setUpdatedBy(orderDetailsEntities.get(0).getUpdatedBy());
+			dto.setUpdatedDate(orderDetailsEntities.get(0).getUpdatedDate());
+			dto.setPincode(orderDetailsEntities.get(0).getPincode());
 			dto.setOrderDetailsList(orderDetailsEntities.stream()
 					.map(e -> modelMapper.map(e, CustomerOrderDetailsDto.class)).collect(Collectors.toList()));
 

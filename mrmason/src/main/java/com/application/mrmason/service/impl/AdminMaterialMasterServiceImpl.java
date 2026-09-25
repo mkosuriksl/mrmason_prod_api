@@ -502,7 +502,8 @@ public class AdminMaterialMasterServiceImpl implements AdminMaterialMasterServic
 	public List<String> listAllMaterialMaster() {
 		return materialMasterRepository.findAll()
 				.stream()
-				.map(MaterialMaster::getMsCatmsSubCatmsBrandSkuId)
+				.map(MaterialMaster::getMaterialCategory)
+				.distinct()
 				.collect(Collectors.toList());
 	}
 

@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.application.mrmason.dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,10 +16,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.application.mrmason.dto.CustomerGetOrderResponseDTO;
-import com.application.mrmason.dto.CustomerOrderRequestDto;
-import com.application.mrmason.dto.GenericResponse;
-import com.application.mrmason.dto.UpdateCustomerOrderRequestDto;
 import com.application.mrmason.entity.CustomerOrderDetailsEntity;
 import com.application.mrmason.entity.CustomerOrderHdrEntity;
 import com.application.mrmason.service.CustomerOrderMethodHandler;
@@ -41,7 +38,7 @@ public class CustomerOrderMethodController {
 	public ResponseEntity<GenericResponse<CustomerOrderHdrEntity>> createCustomerOrderMethod(
 			@RequestBody CustomerOrderRequestDto requestDto) {
 		try {
-			CustomerOrderHdrEntity orderHdr = orderMethodHandler.ceateCustomerOrderMethod(requestDto);
+			CustomerOrderHdrEntity orderHdr = orderMethodHandler.createCustomerOrderMethod(requestDto);
 
 			GenericResponse<CustomerOrderHdrEntity> response = new GenericResponse<>(
 
@@ -57,13 +54,14 @@ public class CustomerOrderMethodController {
 	}
 
 	@PutMapping("/customer-cart/update")
-	public ResponseEntity<?> updateOrderLine(@RequestBody UpdateCustomerOrderRequestDto dto) {
-		try {
-			List<CustomerOrderDetailsEntity> updated = orderMethodHandler.updateOrderDetails(dto);
-			return ResponseEntity.ok(updated);
-		} catch (RuntimeException e) {
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-		}
+	public ResponseEntity<GenericResponse<UpdateCustomerOrderResponseDto>> updateCustomerOrderDetails(
+			@RequestBody UpdateCustomerOrderRequestDto dto) {
+
+		UpdateCustomerOrderResponseDto responseData = orderMethodHandler.updateOrderDetails(dto);
+
+		return ResponseEntity.ok(
+				new GenericResponse<>("Customer order updated successfully.", true, responseData)
+		);
 	}
 
 	
