@@ -3,8 +3,10 @@ package com.application.mrmason.service.impl;
 import com.application.mrmason.dto.CxQuotationRequestDto;
 import com.application.mrmason.dto.CxQuotationResponseDto;
 import com.application.mrmason.entity.*;
+import com.application.mrmason.enums.RegSource;
 import com.application.mrmason.repository.*;
 import com.application.mrmason.service.CxQuotationService;
+import com.application.mrmason.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class CxQuotationServiceImpl implements CxQuotationService {
     private final CxQuotationHeaderDetailRepository cxQuotationHeaderDetailRepository;
     private final CustomerRegistrationRepo customerRegistrationRepo;
     private final AdminDetailsRepo adminDetailsRepo;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -55,29 +58,28 @@ public class CxQuotationServiceImpl implements CxQuotationService {
 
             List<CxQuotationResponseDto.CxQuotationHeader> responseHeaders = new ArrayList<>();
 
-                    String matRequestDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
-                    CxQuotationResponseDto.CxQuotationHeader responseHeader = CxQuotationResponseDto.CxQuotationHeader.builder()
-                            .materialRequestId(basePrefix)
-                            .requestDate(matRequestDate)
-                            .requestStatus("New")
-                            .materialRequestRequestedBy(loggedUser)
-                            .build();
+            String matRequestDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+            CxQuotationResponseDto.CxQuotationHeader responseHeader = CxQuotationResponseDto.CxQuotationHeader.builder()
+                    .materialRequestId(basePrefix)
+                    .requestDate(matRequestDate)
+                    .requestStatus("New")
+                    .materialRequestRequestedBy(loggedUser)
+                    .build();
 
-                    responseHeaders.add(responseHeader);
-                    CxMaterialQuotationRequestHeader headerEntity = CxMaterialQuotationRequestHeader.builder()
-                            .materialRequestId(basePrefix)
-                            .requestDate(responseHeader.getRequestDate())
-                            .requestStatus(responseHeader.getRequestStatus())
-                            .materialRequestRequestedBy(loggedUser)
-                            .updatedBy(loggedUser)
-                            .updatedDate(now)
-                            .expectedDeliveryDate(requestDto.getExpectedDeliveryDate())
-                            .deliveryLocation(requestDto.getDeliveryLocation())
-                            .pincode(requestDto.getPincode())
-                            .build();
+            responseHeaders.add(responseHeader);
+            CxMaterialQuotationRequestHeader headerEntity = CxMaterialQuotationRequestHeader.builder()
+                    .materialRequestId(basePrefix)
+                    .requestDate(responseHeader.getRequestDate())
+                    .requestStatus(responseHeader.getRequestStatus())
+                    .materialRequestRequestedBy(loggedUser)
+                    .updatedBy(loggedUser)
+                    .updatedDate(now)
+                    .expectedDeliveryDate(requestDto.getExpectedDeliveryDate())
+                    .deliveryLocation(requestDto.getDeliveryLocation())
+                    .pincode(requestDto.getPincode())
+                    .build();
 
-                    headersToSave.add(headerEntity);
-
+            headersToSave.add(headerEntity);
 
             List<CxQuotationResponseDto.CxQuotationHeaderDetail> responseDetails = new ArrayList<>();
             if (requestDto.getHeaderDetail() != null) {
@@ -125,6 +127,23 @@ public class CxQuotationServiceImpl implements CxQuotationService {
                     .build();
 
             responseList.add(responseDto);
+
+            if (requestDto.getHeaderDetail() != null && !requestDto.getHeaderDetail().isEmpty()) {
+                for (CxQuotationRequestDto.CxQuotationHeaderDetail detailItem : requestDto.getHeaderDetail()) {
+                    String subject = "Confirmed Quotation - " + detailItem.getProductName();
+                    String body = String.format(
+                            "Dear %s,<br><br>" +
+                                    "Your quotation for '%s' (Quantity: %s) has been successfully created under Request ID: %s." +
+                                    "<br><br>Thank You!",
+                            customer.getCustomerName(),
+                            detailItem.getProductName(),
+                            detailItem.getQuantity(),
+                            basePrefix);
+                    RegSource regSource = customer.getRegSource();
+
+                    emailService.sendEmail(customer.getUserEmail(), subject, body);
+                }
+            }
         }
 
         if (!headersToSave.isEmpty()) {
