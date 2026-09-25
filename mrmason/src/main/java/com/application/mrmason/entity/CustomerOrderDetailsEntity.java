@@ -1,6 +1,7 @@
 package com.application.mrmason.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Date;
 
 import com.application.mrmason.enums.OrderStatus;
@@ -73,6 +74,15 @@ public class CustomerOrderDetailsEntity {
 
 	@Column(name = "updatedBy")
 	private String updatedBy;
+
+	@Column(name = "delivery_date")
+	private LocalDate deliveryDate;
+
+	@Column(name = "delivery_location")
+	private String deliveryLocation;
+
+	@Column(name = "pincode")
+	private String pincode;
 
 	@ManyToOne
 	@JsonBackReference

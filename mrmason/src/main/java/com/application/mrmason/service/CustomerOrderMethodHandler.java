@@ -103,6 +103,9 @@ public class CustomerOrderMethodHandler {
 			orderHdr.setOrderDate(new Date());
 			orderHdr.setUpdatedBy(login.get().getUserid());
 			orderHdr.setUpdatedDate(new Date());
+			orderHdr.setDeliveryDate(dto.getDeliveryDate());
+			orderHdr.setDeliveryLocation(dto.getDeliveryLocation());
+			orderHdr.setPincode(dto.getPincode());
 
 			orderHdrRepo.save(orderHdr);
 
@@ -145,6 +148,9 @@ public class CustomerOrderMethodHandler {
 			orderDetailsEntity.setGst(orderDetails.getGst());
 			orderDetailsEntity.setTotal(orderDetails.getTotal());
 			orderDetailsEntity.setOrderQty(orderDetails.getOrderQty());
+			orderDetailsEntity.setDeliveryDate(orderDetails.getDeliveryDate());
+			orderDetailsEntity.setDeliveryLocation(orderDetails.getDeliveryLocation());
+			orderDetailsEntity.setPincode(orderDetails.getPincode());
 
 //		    orderDetailsEntity.setPrescriptionRequired(orderDetails.getPrescriptionRequired());
 
