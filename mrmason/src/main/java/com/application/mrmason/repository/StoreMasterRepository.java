@@ -3,7 +3,6 @@ package com.application.mrmason.repository;
 import java.util.List;
 import java.util.Optional;
 
-import com.application.mrmason.entity.ElectricalMaster;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -16,8 +15,11 @@ public interface StoreMasterRepository
     boolean existsByStoreId(String storeId);
 
     boolean existsByGst(String gst);
+    Optional<StoreMaster> findByStoreIdAndUpdatedBy(
+        String storeId,
+        String userId);
 
     Optional<StoreMaster> findByStoreId(String storeId);
 
-    Optional<ElectricalMaster> findByStoreIdAndUpdatedBy(String trim, String userId);
+    List<StoreMaster> findByUpdatedBy(String userId);
 }

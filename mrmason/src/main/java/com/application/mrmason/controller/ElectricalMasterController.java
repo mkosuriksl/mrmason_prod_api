@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,36 +15,36 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.application.mrmason.dto.PlumbingMasterRequest;
-import com.application.mrmason.dto.PlumbingMasterResponse;
-import com.application.mrmason.service.PlumbingMasterService;
+import com.application.mrmason.dto.ElectricalMasterRequest;
+import com.application.mrmason.dto.ElectricalMasterResponse;
+import com.application.mrmason.service.ElectricalMasterService;
 
 @RestController
-@RequestMapping("/api/plumbing-master")
-public class PlumbingMasterController {
+@RequestMapping("/api/electrical-master")
+public class ElectricalMasterController {
 
     @Autowired
-    private PlumbingMasterService plumbingMasterService;
+    private ElectricalMasterService electricalMasterService;
 
 
     // ============================================================
-    // CREATE PLUMBING MASTER
+    // CREATE ELECTRICAL MASTER
     // ============================================================
     //
     // POST
-    // /api/plumbing-master
+    // /api/electrical-master/create-electrical-master
     //
     // ONLY MATERIAL SUPPLIER
     //
     // ============================================================
 
-    @PostMapping("create-plumbing-master")
+    @PostMapping("create-electrical-master")
     @PreAuthorize("hasAuthority('MS')")
-    public ResponseEntity<PlumbingMasterResponse> create(
-            @RequestBody PlumbingMasterRequest request) {
+    public ResponseEntity<ElectricalMasterResponse> create(
+            @RequestBody ElectricalMasterRequest request) {
 
-        PlumbingMasterResponse response =
-                plumbingMasterService.create(request);
+        ElectricalMasterResponse response =
+                electricalMasterService.create(request);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -54,83 +53,63 @@ public class PlumbingMasterController {
 
 
     // ============================================================
-    // GET PLUMBING MASTER FOR MATERIAL SUPPLIER
+    // GET ELECTRICAL MASTER FOR MATERIAL SUPPLIER
     // ============================================================
     //
     // GET
-    // /api/plumbing-master
+    // /api/electrical-master/get-for-ms
     //
     // ONLY MATERIAL SUPPLIER
-    //
-    // Example:
-    //
-    // /api/plumbing-master?storeId=1
-    //
-    // /api/plumbing-master?storeId=1&productCategory=Plumbing
     //
     // ============================================================
 
     @GetMapping("get-for-ms")
     @PreAuthorize("hasAuthority('MS')")
-    public ResponseEntity<PlumbingMasterResponse> getForMs(
+    public ResponseEntity<List<ElectricalMasterResponse>> getForMs() {
 
-            @RequestParam(required = false)
-            String storeId,
-
-            @RequestParam(required = false)
-            String updatedBy,
-
-            @RequestParam(required = false)
-            String productCategory,
-
-            @RequestParam(required = false)
-            String productSubCategory) {
-
-        PlumbingMasterResponse response =
-                plumbingMasterService.getForMs(
-                        storeId,
-                        updatedBy,
-                        productCategory,
-                        productSubCategory);
+        List<ElectricalMasterResponse> response =
+                electricalMasterService.getForMs();
 
         return ResponseEntity.ok(response);
     }
 
 
     // ============================================================
-    // UPDATE PLUMBING MASTER
+    // UPDATE ELECTRICAL MASTER
     // ============================================================
     //
     // PUT
-    // /api/plumbing-master/{userIdStoreIdSku}
+    // /api/electrical-master
     //
     // ONLY MATERIAL SUPPLIER
     //
     // Example:
     //
-    // /api/plumbing-master/MS123_1_70011505
+    // /api/electrical-master?userIdSku=MS123_ELECTRICAL_WIRE_POLYCAB_80010001
     //
     // ============================================================
-@PutMapping
-@PreAuthorize("hasAuthority('MS')")
-public ResponseEntity<PlumbingMasterResponse> update(
-        @RequestParam String userIdStoreIdSku,
-        @RequestBody PlumbingMasterRequest request) {
 
-    PlumbingMasterResponse response =
-            plumbingMasterService.update(
-                    userIdStoreIdSku,
-                    request);
+    @PutMapping
+    @PreAuthorize("hasAuthority('MS')")
+    public ResponseEntity<ElectricalMasterResponse> update(
+            @RequestParam String userIdSku,
+            @RequestBody ElectricalMasterRequest request) {
 
-    return ResponseEntity.ok(response);
-}
+        ElectricalMasterResponse response =
+                electricalMasterService.update(
+                        userIdSku,
+                        request);
+
+        return ResponseEntity.ok(response);
+    }
+
 
     // ============================================================
-    // GET PLUMBING MASTER FOR ALL USERS
+    // GET ELECTRICAL MASTER FOR ALL USERS
     // ============================================================
     //
     // GET
-    // /api/plumbing-master/all
+    // /api/electrical-master/all
     //
     // AUTHENTICATED USERS
     //
@@ -138,10 +117,10 @@ public ResponseEntity<PlumbingMasterResponse> update(
 
     @GetMapping("/all")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<PlumbingMasterResponse>> getForAll() {
+    public ResponseEntity<List<ElectricalMasterResponse>> getForAll() {
 
-        List<PlumbingMasterResponse> response =
-                plumbingMasterService.getForAll();
+        List<ElectricalMasterResponse> response =
+                electricalMasterService.getForAll();
 
         return ResponseEntity.ok(response);
     }
