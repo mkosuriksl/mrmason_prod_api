@@ -29,9 +29,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "customer_order_method_header")
 public class CustomerOrderHdrEntity {
 
-
-
-
     @Id
     @Column(name = "OrderId")
     private String orderId;
