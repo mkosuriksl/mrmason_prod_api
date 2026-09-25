@@ -153,7 +153,7 @@ public class ElectricalMasterServiceImpl
                                 "Store not found or does not belong "
                                         + "to the logged-in Material "
                                         + "Supplier: "
-                                        + trimmedStoreId)).getStore();
+                                        + trimmedStoreId));
     }
 
 
