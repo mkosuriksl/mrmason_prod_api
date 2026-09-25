@@ -4,16 +4,22 @@ on:
   push:
     branches:
       - develop
-  workflow_dispatch:   
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # ======================================
+      # Checkout
+      # ======================================
       - name: Checkout develop
         uses: actions/checkout@v4
 
+      # ======================================
+      # Java 17
+      # ======================================
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
@@ -21,24 +27,73 @@ jobs:
           java-version: '17'
           cache: maven
 
+      # ======================================
+      # Build the ACTUAL MrMason project
+      # ======================================
       - name: Build application
-        run: mvn clean package -DskipTests
-
-      - name: Verify JAR
+        working-directory: ./mrmason
         run: |
+          echo "======================================"
+          echo "Building MrMason application"
+          echo "======================================"
+
+          mvn clean package -DskipTests
+
+      # ======================================
+      # Verify generated JAR
+      # ======================================
+      - name: Verify JAR
+        working-directory: ./mrmason
+        run: |
+          echo "======================================"
+          echo "Generated JAR"
+          echo "======================================"
+
           ls -lh target/
+
           test -f target/mrmason-0.0.1-SNAPSHOT.jar
 
+          echo "======================================"
+          echo "Checking MrmasonApplication.class"
+          echo "======================================"
+
+          jar tf target/mrmason-0.0.1-SNAPSHOT.jar | \
+            grep "BOOT-INF/classes/com/application/mrmason/MrmasonApplication.class"
+
+          echo "======================================"
+          echo "Checking CxQuotationController.class"
+          echo "======================================"
+
+          jar tf target/mrmason-0.0.1-SNAPSHOT.jar | \
+            grep "BOOT-INF/classes/com/application/mrmason/controller/CxQuotationController.class"
+
+          echo "======================================"
+          echo "Checking Spring Boot Manifest"
+          echo "======================================"
+
+          unzip -p target/mrmason-0.0.1-SNAPSHOT.jar META-INF/MANIFEST.MF | \
+            grep -E "Main-Class|Start-Class"
+
+          echo "======================================"
+          echo "JAR verification successful"
+          echo "======================================"
+
+      # ======================================
+      # Copy JAR to Development EC2
+      # ======================================
       - name: Copy JAR to Development EC2
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.DEV_EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.DEV_EC2_SSH_KEY }}
-          source: "target/mrmason-0.0.1-SNAPSHOT.jar"
+          source: "mrmason/target/mrmason-0.0.1-SNAPSHOT.jar"
           target: "/opt/mrmason-dev/"
-          strip_components: 1
+          strip_components: 2
 
+      # ======================================
+      # Restart Development Application
+      # ======================================
       - name: Restart Development Application
         uses: appleboy/ssh-action@v1
         with:
@@ -46,23 +101,55 @@ jobs:
           username: ec2-user
           key: ${{ secrets.DEV_EC2_SSH_KEY }}
           script: |
-            echo "Stopping MrMason DEV service..."
+            set -e
+
+            echo "======================================"
+            echo "Stopping MrMason DEV service"
+            echo "======================================"
+
             sudo systemctl stop mrmason-dev
 
-            echo "Replacing application JAR..."
+            echo "======================================"
+            echo "Replacing application JAR"
+            echo "======================================"
+
             mv /opt/mrmason-dev/mrmason-0.0.1-SNAPSHOT.jar \
                /opt/mrmason-dev/mrmason.jar
 
-            echo "Starting MrMason DEV service..."
+            echo "======================================"
+            echo "Verifying deployed JAR"
+            echo "======================================"
+
+            jar tf /opt/mrmason-dev/mrmason.jar | \
+              grep "MrmasonApplication.class"
+
+            jar tf /opt/mrmason-dev/mrmason.jar | \
+              grep "CxQuotationController.class"
+
+            echo "======================================"
+            echo "Starting MrMason DEV service"
+            echo "======================================"
+
             sudo systemctl start mrmason-dev
 
-            echo "Waiting for application startup..."
-            sleep 15
+            echo "======================================"
+            echo "Waiting for application startup"
+            echo "======================================"
 
-            echo "Checking service..."
+            sleep 20
+
+            echo "======================================"
+            echo "Checking service status"
+            echo "======================================"
+
             sudo systemctl is-active --quiet mrmason-dev
 
-            echo "Checking port 8080..."
+            echo "Service is ACTIVE"
+
+            echo "======================================"
+            echo "Checking port 8080"
+            echo "======================================"
+
             sudo ss -lntp | grep ':8080'
 
             echo "======================================"
