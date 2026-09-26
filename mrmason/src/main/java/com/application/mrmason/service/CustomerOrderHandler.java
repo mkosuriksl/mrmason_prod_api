@@ -112,6 +112,7 @@ public class CustomerOrderHandler {
 
 	        // copy fields from cart
 	        orderDetail.setCustomerCartOrderLineId(cartDetail.getOrderlineId());
+                 
 	        orderDetail.setBrand(cartDetail.getBrand());
             orderDetail.setModelName(cartDetail.getModelName());
             orderDetail.setMaterialCategory(cartDetail.getMaterialCategory());
