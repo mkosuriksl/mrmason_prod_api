@@ -11,6 +11,8 @@ public class OrderRequestDto {
     private String location;
     private String deliveryMethod;
     private String userIdstoreId;
+    private String expectedDeliveryDate;
+    private String pincode;
     private List<OrderDetailsDto> orderDetailsList;
 
 }

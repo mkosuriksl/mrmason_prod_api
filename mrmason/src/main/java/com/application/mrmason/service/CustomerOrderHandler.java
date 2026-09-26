@@ -68,7 +68,26 @@ public class CustomerOrderHandler {
 	    CustomerOrderHdrEntity cartHeader = customerCartHdrRepo.findById(dto.getCustomerCartOrderId())
 	            .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
 
-	    // 2️⃣ Create order header
+		// 3️⃣ Fetch all cart details for this cart
+		List<CustomerOrderDetailsEntity> cartDetails =
+				customerCartDetailsRepo.findByOrderId(cartHeader.getOrderId());
+
+/*		String userId = cartDetails.get(0).getMsUserId();
+		if (userId == null || userId.trim().isEmpty()) {
+			throw new IllegalStateException("Cannot place order: Retailer/User ID is missing from cart details.");
+		}*/
+
+		// 4️⃣ Safely handle orderDetailsList from DTO
+		List<OrderDetailsDto> orderDetailsList =
+				Optional.ofNullable(dto.getOrderDetailsList()).orElse(Collections.emptyList());
+
+		// ✅ Only validate if frontend sent the list
+		if (!orderDetailsList.isEmpty() && orderDetailsList.size() != cartDetails.size()) {
+			throw new RuntimeException("Mismatch between cart items and order request items");
+		}
+
+
+		// 2️⃣ Create order header
 	    CustomerRetailerOrderHdrEntity orderHdr = new CustomerRetailerOrderHdrEntity();
 	    orderHdr.setCustomerCartOrderId(cartHeader.getOrderId());
 	    orderHdr.setCustomerId(dto.getCustomerId());
@@ -78,6 +97,9 @@ public class CustomerOrderHandler {
 	    orderHdr.setOrderStatus(OrderStatus.NEW);
 	    orderHdr.setPaymentStatus(OrderStatus.PENDING);
 	    orderHdr.setOrderUpdatedBy("System");
+		orderHdr.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
+		orderHdr.setDeliveryLocation( dto.getLocation() );
+		orderHdr.setPincode( dto.getPincode());
 	    orderHdr.setOrderDate(LocalDate.now());
 	    orderHdr.setOrderUpdatedDate(new Date());
 
@@ -86,20 +108,8 @@ public class CustomerOrderHandler {
 	    orderHdr.setOrderId("INVOICE" +LocalDate.now().getYear()+ sequenceNumber + "_" + userId );
 
 	    orderHdrRepo.save(orderHdr);
-
-	    // 3️⃣ Fetch all cart details for this cart
-	    List<CustomerOrderDetailsEntity> cartDetails =
-	            customerCartDetailsRepo.findByOrderId(cartHeader.getOrderId());
-
-	    // 4️⃣ Safely handle orderDetailsList from DTO
-	    List<OrderDetailsDto> orderDetailsList =
-	            Optional.ofNullable(dto.getOrderDetailsList()).orElse(Collections.emptyList());
-
-	    // ✅ Only validate if frontend sent the list
-	    if (!orderDetailsList.isEmpty() && orderDetailsList.size() != cartDetails.size()) {
-	        throw new RuntimeException("Mismatch between cart items and order request items");
-	    }
-
+		List<CustomerRetailerOrderDetailsEntity> retailerOrderDetailsList = new ArrayList<>();
+		List<MaterialRequirementByRequest> materialReqList = new ArrayList<>();
 	    // 5️⃣ Map cart details to retailer order details
 	    int counter = 1;
 	    for (CustomerOrderDetailsEntity cartDetail : cartDetails) {
@@ -121,6 +131,7 @@ public class CustomerOrderHandler {
 	        orderDetail.setSkuIdUserId(cartDetail.getSkuIdUserId());
 	        orderDetail.setCustomerRetailerOrderHdr(orderHdr);
 	        orderDetailsRepo.save(orderDetail);
+			retailerOrderDetailsList.add(orderDetail);
 	        
 	        MaterialRequirementByRequest materialReq = new MaterialRequirementByRequest();
 	        materialReq.setReqIdLineId(orderDetail.getLineItemId()); // orderlineId -> reqIdLineId
@@ -142,19 +153,28 @@ public class CustomerOrderHandler {
 	        materialReq.setUpdatedDate(new Date());
 	        materialReq.setStatus(OrderStatus.NEW.name());
 	        materialRequirementByRequestRepository.save(materialReq);
+
+			materialReqList.add(materialReq);
 	        
 	        cartDetail.setStatus(OrderStatus.COMPLETED);
 	        cartDetail.setUpdatedDate(new Date());
 	        cartDetail.setUpdatedBy("System");
+
 	    }
+
+		List<CustomerRetailerOrderDetailsEntity> savedOrderDetails = orderDetailsRepo.saveAll(retailerOrderDetailsList);
+		materialRequirementByRequestRepository.saveAll(materialReqList);
 
 	    // 6️⃣ Update cart header
 	    cartHeader.setStatus(OrderStatus.COMPLETED);
 	    cartHeader.setOrderUpdatedDate(new Date());
 	    cartHeader.setOrderUpdatedBy("System");
 
+
 	    customerCartHdrRepo.save(cartHeader);
 	    customerCartDetailsRepo.saveAll(cartDetails);
+
+		orderHdr.setCustomerRetailerOrderDetailsList(savedOrderDetails);
 
 	    return orderHdr;
 	}

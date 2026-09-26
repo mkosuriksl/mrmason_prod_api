@@ -212,11 +212,11 @@ public class SpServiceDetailsServiceImpl implements SpServiceDetailsService {
 		List<SpServiceDetails> serviceDetails;
 
 		if (serviceType != null && location != null) {
-			serviceDetails = serviceRepo.findByServiceTypeAndLocationLikeIgnoreCase(serviceType, location.trim() + "%");
+			serviceDetails = serviceRepo.findByServiceTypeAndLocationLikeIgnoreCase(serviceType, "%" + location.trim() + "%");
 		} else if (serviceType != null && location == null) {
 			serviceDetails = serviceRepo.findByServiceType(serviceType);
 		} else if (location != null && serviceType == null) {
-			serviceDetails = serviceRepo.findByLocationLikeIgnoreCase(location.trim() + "%");
+			serviceDetails = serviceRepo.findByLocationLikeIgnoreCase("%" + location.trim() + "%");
 		} else {
 			return Collections.emptyList();
 		}

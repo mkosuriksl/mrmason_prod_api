@@ -31,7 +31,7 @@ public class SpServiceDetails {
 	@Builder.Default
 	private String status="active";
 	private String availableWithinRange;
-	@Column(name="pincode")
+	@Column(name="location")
 	private String location;
 	private String city;
 	

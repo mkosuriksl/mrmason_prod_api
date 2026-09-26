@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 
 import com.application.mrmason.enums.RegSource;
 import com.application.mrmason.service.EmailService;
-import com.itextpdf.io.IOException;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -22,21 +21,40 @@ public class EmailServiceImpl implements EmailService {
 	@Autowired
 	private JavaMailSender mailsender;
 
-	public void sendEmail(String toEmail, String subject, String body) {
-		try {
-			MimeMessage message = mailsender.createMimeMessage();
-			MimeMessageHelper helper = new MimeMessageHelper(message, true);
+	@Override
+	public void sendEmail(String toMail, String subject, String body, RegSource regSource) {
+	    try {
+	        MimeMessage message = mailsender.createMimeMessage();
+	        MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
-			helper.setFrom("no_reply@kosuriers.com"); // Update this if needed
-			helper.setTo(toEmail);
-			helper.setSubject(subject);
-			helper.setText(body, true); // Set to true for HTML content
+	        helper.setFrom("no_reply@kosuriers.com"); // Update this if needed
+	        helper.setTo(toMail);
+	        helper.setSubject(subject);
+	        helper.setText(body, true);
+	        // Set to true for HTML content
 
-			mailsender.send(message);
-			log.info("Email sent successfully to {}", toEmail);
-		} catch (MessagingException e) {
-			log.error("Failed to send email to {}: {}", toEmail, e.getMessage());
-		}
+	        mailsender.send(message);
+	        log.info("Email sent successfully to {}", toMail);
+	    } catch (MessagingException e) {
+	        log.error("Failed to send email to {}: {}", toMail, e.getMessage());
+	    }
+	}
+
+	@Override
+	public void sendEmail(String toMail, String subject, String body) {
+	    try {
+	        MimeMessage message = mailsender.createMimeMessage();
+	        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+	        helper.setFrom("no_reply@kosuriers.com"); // Update this if needed
+	        helper.setTo(toMail);
+	        helper.setSubject(subject);
+	        helper.setText(body, true); // Set to true for HTML content
+	        mailsender.send(message);
+	        log.info("Email sent successfully to {}", toMail);
+	    } catch (MessagingException e) {
+	        log.error("Failed to send email to {}: {}", toMail, e.getMessage());
+	    }
 	}
 	
 	public void sendEmailWithAttachment(String to, String subject, String bodyText, byte[] pdfBytes, String filename) {
@@ -53,31 +71,31 @@ public class EmailServiceImpl implements EmailService {
 	        helper.addAttachment(filename, dataSource);
 
 	        mailsender.send(message);
-	    } catch (MessagingException | IOException e) {
+	    } catch (MessagingException | com.itextpdf.io.IOException e) {
 	        throw new RuntimeException("Failed to send email with attachment", e);
 	    }
 	}
 	
-	  public void sendEmailWithPdfAttachment(String to, String subject, String body, byte[] attachmentData, String fileName) {
-	        try {
-	            MimeMessage message = mailsender.createMimeMessage();
-	            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+	public void sendEmailWithPdfAttachment(String to, String subject, String body, byte[] attachmentData, String fileName) {
+        try {
+            MimeMessage message = mailsender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
-	            helper.setTo(to);
-	            helper.setSubject(subject);
-	            helper.setText(body);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body);
 
-	            helper.addAttachment(fileName, new ByteArrayResource(attachmentData));
+            helper.addAttachment(fileName, new ByteArrayResource(attachmentData));
 
-	            mailsender.send(message);
-	        } catch (MessagingException e) {
-	            throw new RuntimeException("Failed to send email", e);
-	        }
-	    }
+            mailsender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send email", e);
+        }
+    }
 
 
 	@Override
-	public void sendEmail(String toMail, String otp) {
+	public void sendEmail(String toMail, String body) {
 		try {
 			MimeMessage message = mailsender.createMimeMessage();
 			MimeMessageHelper helper = new MimeMessageHelper(message, true);
@@ -85,35 +103,7 @@ public class EmailServiceImpl implements EmailService {
 			helper.setFrom("no_reply@kosuriers.com"); // Update this if needed
 			helper.setTo(toMail);
 			helper.setSubject("YOUR OTP FOR VERIFICATION.");
-			String body =null;
-			body = "Thanks for registering with us. Your OTP to verify your email is " + otp + " - www.mrmason.in";	
 			helper.setText(body, true); // Set to true for HTML content
-			mailsender.send(message);
-			log.info("Email sent successfully to {}", toMail);
-		} catch (MessagingException e) {
-			log.error("Failed to send email to {}: {}", toMail, e.getMessage());
-		}
-	}
-	@Override
-	public void sendEmail(String toMail, String otp, RegSource regSource) {
-		try {
-			MimeMessage message = mailsender.createMimeMessage();
-			MimeMessageHelper helper = new MimeMessageHelper(message, true);
-
-			helper.setFrom("no_reply@kosuriers.com"); // Update this if needed
-			helper.setTo(toMail);
-			helper.setSubject("YOUR OTP FOR VERIFICATION.");
-			String body =null;
-			if (regSource == RegSource.MRMASON) {
-				 body = "Thanks for registering with us. Your OTP to verify your email is " + otp + " - www.mrmason.in";
-			}else if(regSource == RegSource.MEKANIK) {
-				 body = "Thanks for registering with us. Your OTP to verify your email is " + otp + " - www.mekanik.in";
-			}else if(regSource==RegSource.BHATSR) {
-				 body = "Thanks for registering with us. Your OTP to verify your email is " + otp + " - www.bhatsr.in";
-			}
-			
-			helper.setText(body, true); // Set to true for HTML content
-
 			mailsender.send(message);
 			log.info("Email sent successfully to {}", toMail);
 		} catch (MessagingException e) {
@@ -121,6 +111,41 @@ public class EmailServiceImpl implements EmailService {
 		}
 	}
 	
+	@Override
+	public void sendEmailPromotion(String toMail, String subject, String body, RegSource regSource) {
+	    try {
+	        MimeMessage message = mailsender.createMimeMessage();
+	        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+	        helper.setFrom("no_reply@kosuriers.com");
+	        helper.setTo(toMail);
+
+	        // You pass subject & body directly now
+	        helper.setSubject(subject);
+	        helper.setText(body, true); // true = allow HTML
+
+	        mailsender.send(message);
+	        log.info("Promotional Email sent successfully to {} via {}", toMail, regSource);
+	    } catch (MessagingException e) {
+	        log.error("Failed to send promotional email to {}: {}", toMail, e.getMessage());
+	    }
+	}
+
+	@Override
+	public void sendWebMail(String toMail, String body) {
+
+		MimeMessage message = mailsender.createMimeMessage();
+		MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+		try {
+			helper.setTo(toMail);
+			helper.setSubject("OTP LOGIN SUCCESSFUL");
+			helper.setText(body, true);
+			mailsender.send(message);
+		} catch (MessagingException e) {
+			// Handle exception
+		}
+	}
+
 	@Override
 	public void sendEmail(String toMail, RegSource regSource) {
 	    try {
@@ -158,40 +183,31 @@ public class EmailServiceImpl implements EmailService {
 	    }
 	}
 
-	
-	public void sendWebMail(String toMail, String body) {
-
-		MimeMessage message = mailsender.createMimeMessage();
-		MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+	@Override
+	public void sendEmail(String toMail, String otp, RegSource regSource) {
 		try {
+			MimeMessage message = mailsender.createMimeMessage();
+			MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+			helper.setFrom("no_reply@kosuriers.com"); // Update this if needed
 			helper.setTo(toMail);
-			helper.setSubject("OTP LOGIN SUCCESSFUL");
-			helper.setText(body, true);
+			helper.setSubject("YOUR OTP FOR VERIFICATION.");
+			String body = null;
+			if (regSource == RegSource.MRMASON) {
+				 body = "Thanks for registering with us. Your OTP to verify your email is " + otp + " - www.mrmason.in";
+			}else if(regSource == RegSource.MEKANIK) {
+				 body = "Thanks for registering with us. Your OTP to verify your email is " + otp + " - www.mekanik.in";
+			}else if(regSource==RegSource.BHATSR) {
+				 body = "Thanks for registering with us. Your OTP to verify your email is " + otp + " - www.bhatsr.in";
+			}
+			
+			helper.setText(body, true); // Set to true for HTML content
+
 			mailsender.send(message);
+			log.info("Email sent successfully to {}", toMail);
 		} catch (MessagingException e) {
-			// Handle exception
+			log.error("Failed to send email to {}: {}", toMail, e.getMessage());
 		}
 	}
-	
-	@Override
-	public void sendEmailPromotion(String toMail, String subject, String body, RegSource regSource) {
-	    try {
-	        MimeMessage message = mailsender.createMimeMessage();
-	        MimeMessageHelper helper = new MimeMessageHelper(message, true);
-
-	        helper.setFrom("no_reply@kosuriers.com");
-	        helper.setTo(toMail);
-
-	        // You pass subject & body directly now
-	        helper.setSubject(subject);
-	        helper.setText(body, true); // true = allow HTML
-
-	        mailsender.send(message);
-	        log.info("Promotional Email sent successfully to {} via {}", toMail, regSource);
-	    } catch (MessagingException e) {
-	        log.error("Failed to send promotional email to {}: {}", toMail, e.getMessage());
-	    }
-	}
-
 
 }
