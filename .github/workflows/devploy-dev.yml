@@ -79,7 +79,7 @@ jobs:
           key: ${{ secrets.DEV_EC2_SSH_KEY }}
           source: "mrmason/target/mrmason-0.0.1-SNAPSHOT.jar"
           target: "/opt/mrmason-dev/"
-          strip_components: 1
+          strip_components: 2
 
       # ==========================================
       # DEPLOY / RESTART
