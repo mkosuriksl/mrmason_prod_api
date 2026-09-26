@@ -106,3 +106,4 @@ jobs:
             echo "DIAGNOSTIC COMPLETE"
             echo "======================================"
 
+# Manual deployment enabled for develop
