@@ -5,17 +5,10 @@ import java.util.Date;
 import java.util.List;
 
 import com.application.mrmason.enums.OrderStatus;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -48,7 +41,16 @@ public class CustomerRetailerOrderHdrEntity {
     @Column(name = "payment_status")
     @Enumerated(EnumType.STRING)
     private OrderStatus paymentStatus;
-    
+
+    @Column(name = "expected_delivery_date")
+    private String expectedDeliveryDate;
+
+    @Column(name = "delivery_location")
+    private String deliveryLocation;
+
+    @Column(name = "pincode")
+    private String pincode;
+
     @OneToMany(mappedBy = "customerRetailerOrderHdr", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JsonManagedReference
     private List<CustomerRetailerOrderDetailsEntity> customerRetailerOrderDetailsList;

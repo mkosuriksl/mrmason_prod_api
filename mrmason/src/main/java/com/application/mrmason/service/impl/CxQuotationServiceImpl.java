@@ -8,6 +8,7 @@ import com.application.mrmason.repository.*;
 import com.application.mrmason.service.CxQuotationService;
 import com.application.mrmason.service.EmailService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CxQuotationServiceImpl implements CxQuotationService {
 
     private final CxQuotationRepository cxQuotationRepository;
@@ -53,6 +55,8 @@ public class CxQuotationServiceImpl implements CxQuotationService {
 
         List<CxMaterialQuotationRequestHeader> headersToSave = new ArrayList<>();
         List<CxMaterialQuotationRequestHeaderDetails> detailsToSave = new ArrayList<>();
+
+        StringBuilder emailRowsBuilder = new StringBuilder();
 
         for (CxQuotationRequestDto requestDto : dtoList) {
 
@@ -114,6 +118,15 @@ public class CxQuotationServiceImpl implements CxQuotationService {
                             .build();
 
                     detailsToSave.add(detailEntity);
+
+                    emailRowsBuilder.append("<tr>")
+                            .append("<td>").append(detailItem.getProductName()).append("</td>")
+                            .append("<td>").append(detailItem.getBrand() != null ? detailItem.getBrand() : "N/A").append("</td>")
+                            .append("<td>").append(detailItem.getQuantity()).append("</td>")
+                            .append("<td>").append(detailItem.getSku() != null ? detailItem.getSku() : "NA").append("</td>")
+                            .append("<td>").append(requestDto.getDeliveryLocation()).append("</td>")
+                            .append("<td>").append(requestDto.getExpectedDeliveryDate()).append("</td>")
+                            .append("</tr>");
                 }
             }
             CxQuotationResponseDto responseDto = CxQuotationResponseDto.builder()
@@ -131,21 +144,10 @@ public class CxQuotationServiceImpl implements CxQuotationService {
             if (requestDto.getHeaderDetail() != null && !requestDto.getHeaderDetail().isEmpty()) {
                 for (CxQuotationRequestDto.CxQuotationHeaderDetail detailItem : requestDto.getHeaderDetail()) {
                     String subject = "Confirmed Quotation - " + detailItem.getProductName();
-                    String body = String.format(
-                            "Dear %s,<br><br>" +
-                                    "Your quotation for '%s' (Quantity: %s) has been successfully created under Request ID: %s." +
-                                    "<br><br>Thank You!",
-                            customer.getCustomerName(),
-                            detailItem.getProductName(),
-                            detailItem.getQuantity(),
-                            basePrefix);
-                    RegSource regSource = customer.getRegSource();
 
-                    emailService.sendEmail(customer.getUserEmail(), subject, body);
                 }
             }
         }
-
         if (!headersToSave.isEmpty()) {
             cxQuotationRepository.saveAll(headersToSave);
         }
@@ -153,6 +155,31 @@ public class CxQuotationServiceImpl implements CxQuotationService {
             cxQuotationHeaderDetailRepository.saveAll(detailsToSave);
         }
 
+        try {
+            String subject = "Confirmed Quotation Requests - " + basePrefix;
+            String body = "<div style='font-family: Arial, sans-serif; color: #333; max-width: 700px;'>"
+                    + "<p>Dear <b>" + customer.getCustomerName() + "</b>,</p>"
+                    + "<p>Your quotation requests (Request ID: <b>" + basePrefix + "</b>) have been successfully submitted. Below is the summary of items:</p>"
+                    + "<table border='1' cellpadding='8' cellspacing='0' style='border-collapse: collapse; width: 100%; border: 1px solid #ddd;'>"
+                    + "  <tr style='background-color: #f2f2f2;'>"
+                    + "    <th style='text-align: left;'>Product Name</th>"
+                    + "    <th style='text-align: left;'>Brand</th>"
+                    + "    <th style='text-align: left;'>Qty</th>"
+                    + "    <th style='text-align: left;'>SKU</th>"
+                    + "    <th style='text-align: left;'>Location</th>"
+                    + "    <th style='text-align: left;'>Expected Date</th>"
+                    + "  </tr>"
+                    + emailRowsBuilder.toString()
+                    + "</table>"
+                    + "<p style='margin-top: 15px;'>Please check your portal for complete details and tracking updates.</p>"
+                    + "<p>Regards,<br><b>Mr Mason Team</b></p>"
+                    + "</div>";
+
+            RegSource regSource = customer.getRegSource();
+            emailService.sendEmail(customer.getUserEmail(), subject, body, regSource);
+        }catch (Exception e){
+            log.error("Failed to send consolidated quotation email to {}: {}", customer.getUserEmail(), e.getMessage());
+        }
         return responseList;
     }
 
@@ -312,7 +339,32 @@ public class CxQuotationServiceImpl implements CxQuotationService {
                     .build();
 
             responseList.add(responseDto);
+
+            String subject = "Confirmed Quotation - " + detailsEntityList.get(0).getProductName();
+
+            String body = "<div style='font-family: Arial, sans-serif; color: #333; max-width: 600px;'>"
+                    + "<p>Dear <b>" + customer.getCustomerName() + "</b>,</p>"
+                    + "<p>Your quotation request has been submitted successfully. Below are the details:</p>"
+                    + "<table border='1' cellpadding='8' cellspacing='0' style='border-collapse: collapse; width: 100%; border: 1px solid #ddd;'>"
+                    + "  <tr style='background-color: #f2f2f2;'><th style='text-align: left;'>Field</th><th style='text-align: left;'>Details</th></tr>"
+                    + "  <tr><td><b>Customer User ID</b></td><td>" + customerId + "</td></tr>"
+                    + "  <tr><td><b>Quotation ID</b></td><td>" + detailsEntityList.get(0).getQuotationId() + "</td></tr>"
+                    + "  <tr><td><b>Product Name</b></td><td>" + detailsEntityList.get(0).getProductName() + "</td></tr>"
+                    + "  <tr><td><b>Category / Sub-Category</b></td><td>" + detailsEntityList.get(0).getProductCategory() + " / " + detailsEntityList.get(0).getProductSubCategory() + "</td></tr>"
+                    + "  <tr><td><b>Brand / SKU</b></td><td>" + detailsEntityList.get(0).getBrand() + " / " + detailsEntityList.get(0).getSku() + "</td></tr>"
+                    + "  <tr><td><b>Quantity</b></td><td>" + detailsEntityList.get(0).getQuantity() + "</td></tr>"
+                    + "  <tr><td><b>Delivery Location</b></td><td>" + header.getDeliveryLocation() + " (Pincode: " + header.getPincode() + ")</td></tr>"
+                    + "  <tr><td><b>Expected Delivery Date</b></td><td>" + header.getExpectedDeliveryDate() + "</td></tr>"
+                    + "</table>"
+                    + "<p style='margin-top: 15px;'>Please check your portal for complete details and updates.</p>"
+                    + "<p>Regards,<br><b>Mr Mason Team</b></p>"
+                    + "</div>";
+
+            RegSource regSource = customer.getRegSource();
+
+            emailService.sendEmail(customer.getUserEmail(), subject, body, regSource);
         }
+
         return responseList;
     }
 
