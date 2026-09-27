@@ -21,7 +21,7 @@ import lombok.Setter;
 public class AdminMaterialMaster {
 
 	@Id
-	@Column(name = "skuId")
+	@Column(name = "sku_id")
 	private String skuId;
 
 	@Column(name = "materical_category")

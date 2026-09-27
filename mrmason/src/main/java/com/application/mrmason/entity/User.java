@@ -92,6 +92,7 @@ public class User implements UserDetails {
 	@Column(name = "STATUS")
 	private String status = "inactive";
 
+	@Column(name = "REG_SOURCE")
 	@Enumerated(EnumType.STRING)
 	private RegSource regSource;
 	

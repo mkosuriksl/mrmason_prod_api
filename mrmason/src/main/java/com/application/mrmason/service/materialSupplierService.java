@@ -14,6 +14,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.application.mrmason.dto.*;
+import com.application.mrmason.repository.*;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
@@ -25,11 +28,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.application.mrmason.dto.GenericResponse;
-import com.application.mrmason.dto.MaterialSupplierHeaderQuotationStatusRequest;
-import com.application.mrmason.dto.MaterialSupplierQuotationCombinedResponse;
-import com.application.mrmason.dto.QuotationStatusUpdateRequest;
-import com.application.mrmason.dto.ResponseInvoiceAndDetailsDto;
 import com.application.mrmason.entity.AdminDetails;
 import com.application.mrmason.entity.CMaterialReqHeaderDetailsEntity;
 import com.application.mrmason.entity.CMaterialRequestHeaderEntity;
@@ -44,14 +42,6 @@ import com.application.mrmason.entity.UserType;
 import com.application.mrmason.enums.RegSource;
 import com.application.mrmason.enums.Status;
 import com.application.mrmason.exceptions.ResourceNotFoundException;
-import com.application.mrmason.repository.AdminDetailsRepo;
-import com.application.mrmason.repository.CMaterialReqHeaderDetailsRepository;
-import com.application.mrmason.repository.CustomerRegistrationRepo;
-import com.application.mrmason.repository.InvoiceRepository;
-import com.application.mrmason.repository.MaterialSupplierQuotationHeaderHistoryRepo;
-import com.application.mrmason.repository.MaterialSupplierQuotationHeaderRepository;
-import com.application.mrmason.repository.MaterialSupplierQuotationUserDAO;
-import com.application.mrmason.repository.MaterialSupplierRepository;
 import com.application.mrmason.security.AuthDetailsProvider;
 import com.application.mrmason.service.impl.EmailServiceImpl;
 import com.itextpdf.io.font.constants.StandardFonts;
@@ -107,6 +97,8 @@ public class materialSupplierService {
 	private MaterialSupplierQuotationHeaderHistoryRepo materialSupplierQuotationHeaderHistoryRepo;
 	@Autowired
 	private EmailServiceImpl emailService;
+	@Autowired
+	private CMaterialRequestHeaderRepository cMaterialRequestHeaderRepository;
 
 	@Transactional
 	public GenericResponse<List<MaterialSupplier>> saveItems(List<MaterialSupplier> materialQuotation,
@@ -1101,5 +1093,62 @@ public class materialSupplierService {
 		}
 
 		return saved;
+	}
+
+
+	public MaterialHeaderAndDetailedDto getMaterialHeaderAndDetailed(String materialRequestId){
+
+		List<CMaterialRequestHeaderEntity> headerEntities;
+		List<CMaterialReqHeaderDetailsEntity> detailEntities;
+
+		if (materialRequestId != null && !materialRequestId.trim().isEmpty()) {
+
+			CMaterialRequestHeaderEntity headerEntity = cMaterialRequestHeaderRepository
+					.findById(materialRequestId)
+					.orElseThrow(() -> new EntityNotFoundException("Material Request Header not found for ID: " + materialRequestId));
+
+			headerEntities = List.of(headerEntity);
+			detailEntities = cMaterialReqHeaderDetailsRepository.findByCMatRequestId(materialRequestId);
+
+		} else {
+			headerEntities = cMaterialRequestHeaderRepository.findAll();
+			detailEntities = cMaterialReqHeaderDetailsRepository.findAll();
+		}
+
+		List<MaterialHeaderAndDetailedDto.MaterialHeaderDto> headerDtos = headerEntities.stream()
+				.map(header -> MaterialHeaderAndDetailedDto.MaterialHeaderDto.builder()
+						.materialRequestId(header.getMaterialRequestId())
+						.totalQty(header.getTotalQty())
+						.customerName(header.getCustomerName())
+						.customerEmail(header.getCustomerEmail())
+						.customerMobile(header.getCustomerMobile())
+						.quoteId(header.getQuoteId())
+						.deliveryLocation(header.getDeliveryLocation())
+						.deliveryDate(header.getDeliveryDate())
+						.createdDate(header.getCreatedDate())
+						.updatedBy(header.getUpdatedBy())
+						.requestedBy(header.getRequestedBy())
+						.build())
+				.collect(Collectors.toList());
+
+		List<MaterialHeaderAndDetailedDto.MaterialHeaderDetailedDto> detailDtos = detailEntities.stream()
+				.map(detail -> MaterialHeaderAndDetailedDto.MaterialHeaderDetailedDto.builder()
+						.cMatRequestIdLineid(detail.getCMatRequestIdLineid())
+						.cMatRequestId(detail.getCMatRequestId())
+						.materialCategory(detail.getMaterialCategory())
+						.brand(detail.getBrand())
+						.itemName(detail.getItemName())
+						.itemSize(detail.getItemSize())
+						.qty(detail.getQty())
+						.orderDate(detail.getOrderDate())
+						.requestedBy(detail.getRequestedBy())
+						.updatedDate(detail.getUpdatedDate())
+						.build())
+				.collect(Collectors.toList());
+
+		return MaterialHeaderAndDetailedDto.builder()
+				.materialHeader(headerDtos)
+				.materialHeaderDetailed(detailDtos)
+				.build();
 	}
 }

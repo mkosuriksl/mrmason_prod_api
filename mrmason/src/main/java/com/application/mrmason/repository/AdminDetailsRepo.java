@@ -15,7 +15,10 @@ import com.application.mrmason.entity.AdminDetails;
 import com.application.mrmason.entity.UserType;
 @Repository
 public interface AdminDetailsRepo extends JpaRepository<AdminDetails,Long >{
+
 	AdminDetails findByEmailOrMobile(String email,String mobile);
+
+	boolean existsByEmailOrMobile(String email, String mobile);
 
 //	List<AdminDetails>  findByAdminType(String adminType);
 	AdminDetails findByEmail(String email);
@@ -28,4 +31,5 @@ public interface AdminDetailsRepo extends JpaRepository<AdminDetails,Long >{
 	Page<AdminDetails> findByEmailOrMobile(String string, String string2, Pageable pageable);
 
 	AdminDetails findByAdminId(String adminId);
+
 }

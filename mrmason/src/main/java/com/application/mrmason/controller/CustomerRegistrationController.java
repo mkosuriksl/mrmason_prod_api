@@ -36,6 +36,7 @@ public class CustomerRegistrationController {
 	ResponseMessageDto response2 = new ResponseMessageDto();
 	ResponseLoginDto response3=new ResponseLoginDto();
 	ResponseCustomerRegDto response = new ResponseCustomerRegDto();
+
 	@PostMapping("/addNewUser")
 	public ResponseEntity<?> newCustomer(@RequestBody CustomerRegistration customer) {
 		if (!service.isUserUnique(customer)) {
@@ -210,7 +211,6 @@ public class CustomerRegistrationController {
 			response3.setMessage(e.getMessage());
 			return new ResponseEntity<ResponseLoginDto>(response3, HttpStatus.OK);
 		}
-		
 
 	}
 	

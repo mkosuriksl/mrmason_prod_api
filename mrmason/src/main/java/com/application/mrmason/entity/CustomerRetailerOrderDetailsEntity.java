@@ -9,9 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Data
@@ -24,6 +22,9 @@ public class CustomerRetailerOrderDetailsEntity {
     
     private String customerCartOrderLineId;
 	private String brand;
+    private String modelName;
+    private String materialCategory;
+    private String materialSubCategory;
     private int orderQty;
     private Double mrp;
     private float discount;
@@ -37,6 +38,8 @@ public class CustomerRetailerOrderDetailsEntity {
     @ManyToOne
     @JsonBackReference
     @JoinColumn(name="orderId",referencedColumnName = "orderId")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private CustomerRetailerOrderHdrEntity customerRetailerOrderHdr;
 
 }

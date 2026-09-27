@@ -2,6 +2,9 @@ package com.application.mrmason.service.impl;
 
 import java.util.Optional;
 
+
+import jakarta.persistence.EntityExistsException;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -21,6 +24,7 @@ import com.application.mrmason.service.AdminDetailsService;
 import com.application.mrmason.service.OtpGenerationService;
 
 @Service
+@Slf4j
 public class AdminDetailsServiceImpl implements AdminDetailsService {
 	@Autowired
 	public AdminDetailsRepo adminRepo;
@@ -37,9 +41,26 @@ public class AdminDetailsServiceImpl implements AdminDetailsService {
 
 	@Override
 	public AdminDetails registerDetails(AdminDetails admin) {
-		BCryptPasswordEncoder byCrypt = new BCryptPasswordEncoder();
 
-		Optional<AdminDetails> user = Optional
+		if (admin == null) {
+			throw new IllegalArgumentException("Admin details cannot be null.");
+		}
+
+		if (admin == null || admin.getPassword() == null || admin.getPassword().isBlank()) {
+			log.info("Registration failed: Password cannot be null or empty.");
+			throw new IllegalArgumentException("Password cannot be null or empty.");
+		}
+
+		boolean exist = adminRepo.existsByEmailOrMobile(admin.getEmail(), admin.getMobile());
+		if(exist) {
+			log.warn("Registration failed: Admin already exists with email {} or mobile {}",
+					admin.getEmail(), admin.getMobile());
+			throw new EntityExistsException("An admin with this email or mobile already exists.");
+		}
+
+		admin.setPassword(byCrypt.encode(admin.getPassword()));
+
+/*		Optional<AdminDetails> user = Optional
 				.ofNullable(adminRepo.findByEmailOrMobile(admin.getEmail(), admin.getMobile()));
 		if (!user.isPresent()) {
 			String encryptPassword = byCrypt.encode(admin.getPassword());
@@ -47,7 +68,8 @@ public class AdminDetailsServiceImpl implements AdminDetailsService {
 
 			return adminRepo.save(admin);
 		}
-		return null;
+		return null;*/
+		return  adminRepo.save(admin);
 	}
 
 	@Override
@@ -70,26 +92,6 @@ public class AdminDetailsServiceImpl implements AdminDetailsService {
 		return null;
 	}
 
-//	@Override
-//	public AdminDetailsDto getAdminDetails(String email, String mobile) {
-//
-//		Optional<AdminDetails> user = Optional.ofNullable(adminRepo.findByEmailOrMobile(email, mobile));
-//		AdminDetails adminDetails = user.get();
-//		if (user.isPresent()) {
-//			AdminDetailsDto adminDto = new AdminDetailsDto();
-////			admin.setId(adminDetails.getId());
-////			admin.setAdminName(adminDetails.getAdminName());
-////			admin.setAdminType(String.valueOf(adminDetails.getUserType()));
-////			admin.setEmail(adminDetails.getEmail());
-////			admin.setMobile(adminDetails.getMobile());
-////			admin.setStatus(adminDetails.getStatus());
-////			admin.setRegDate(adminDetails.getRegDate());
-//			AdminDetailsDto admin = model.map(adminDetails, adminDto.getClass());
-//			return admin;
-//		}
-//
-//		return null;
-//	}
 	@Override
 	public Page<AdminAsset> getAdminDetails(String email, String mobile, int pageNo, int pageSize) {
 	    Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by("regDate").descending());
@@ -240,4 +242,27 @@ public class AdminDetailsServiceImpl implements AdminDetailsService {
 		return null;
 
 	}
+
+
+
+//	@Override
+//	public AdminDetailsDto getAdminDetails(String email, String mobile) {
+//
+//		Optional<AdminDetails> user = Optional.ofNullable(adminRepo.findByEmailOrMobile(email, mobile));
+//		AdminDetails adminDetails = user.get();
+//		if (user.isPresent()) {
+//			AdminDetailsDto adminDto = new AdminDetailsDto();
+////			admin.setId(adminDetails.getId());
+////			admin.setAdminName(adminDetails.getAdminName());
+////			admin.setAdminType(String.valueOf(adminDetails.getUserType()));
+////			admin.setEmail(adminDetails.getEmail());
+////			admin.setMobile(adminDetails.getMobile());
+////			admin.setStatus(adminDetails.getStatus());
+////			admin.setRegDate(adminDetails.getRegDate());
+//			AdminDetailsDto admin = model.map(adminDetails, adminDto.getClass());
+//			return admin;
+//		}
+//
+//		return null;
+//	}
 }

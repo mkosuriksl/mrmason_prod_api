@@ -51,7 +51,17 @@ public class CustomerOrderHdrEntity {
     
     @Column(name = "updated_by")
     private String updatedBy;
-	
+
+    @Column(name = "delivery_date")
+    private LocalDate deliveryDate;
+
+    @Column(name = "delivery_location")
+    private String deliveryLocation;
+
+    @Column(name = "pincode")
+    private String pincode;
+
+
 //	@Column(name = "skuId_userId")
 //	private String skuIdUserId;
 	
@@ -75,6 +85,4 @@ public class CustomerOrderHdrEntity {
         int randomInt = random.nextInt(900000) + 100000;
         return String.valueOf(randomInt);
     }
-
-
 }

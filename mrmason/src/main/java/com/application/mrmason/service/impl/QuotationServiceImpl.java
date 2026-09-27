@@ -1,19 +1,21 @@
 package com.application.mrmason.service.impl;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.application.mrmason.dto.QuotationResponseDto;
+import com.application.mrmason.entity.*;
+import com.application.mrmason.repository.CustomerRegistrationRepo;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
-import com.application.mrmason.entity.QuotationEntity;
-import com.application.mrmason.entity.SiteMeasurement;
-import com.application.mrmason.entity.User;
-import com.application.mrmason.entity.UserType;
 import com.application.mrmason.enums.RegSource;
 import com.application.mrmason.exceptions.ResourceNotFoundException;
 import com.application.mrmason.repository.QuotationRepository;
@@ -31,19 +33,15 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 
 @Service
+@RequiredArgsConstructor
 public class QuotationServiceImpl implements QuotationService {
-
-	@Autowired
-	private QuotationRepository repository;
 
 	@PersistenceContext
 	private EntityManager entityManager;
-
-	@Autowired
-	UserDAO userDAO;
-	
-    @Autowired
-    private SiteMeasurementRepository siteRepository;
+	private final QuotationRepository repository;
+	private final UserDAO userDAO;
+    private final SiteMeasurementRepository siteRepository;
+	private final CustomerRegistrationRepo customerRegistrationRepo;
 
 	@Override
 	public QuotationEntity createQuotation(QuotationEntity quotationEntity,RegSource regSource) {
@@ -51,16 +49,16 @@ public class QuotationServiceImpl implements QuotationService {
 		Collection<? extends GrantedAuthority> loggedInRole = AuthDetailsProvider.getLoggedRole();
 		System.out.println("ROLE"+loggedInUserEmail);
 		List<String> roleNames = loggedInRole.stream()
-		        .map(GrantedAuthority::getAuthority)
-		        .map(role -> role.replace("ROLE_", "")) // Remove "ROLE_" prefix
-		        .collect(Collectors.toList());
+				.map(GrantedAuthority::getAuthority)
+				.map(role -> role.replace("ROLE_", "")) // Remove "ROLE_" prefix
+				.collect(Collectors.toList());
 
 		if (roleNames.equals("Developer")||roleNames.equals("Adm")) {
-		    throw new ResourceNotFoundException("Role Developer not found in: " + roleNames);
+			throw new ResourceNotFoundException("Role Developer not found in: " + roleNames);
 		}
 		UserType userType = UserType.valueOf(roleNames.get(0)); // Make sure roleNames is not empty
 		User user = userDAO.findByEmailAndUserTypeAndRegSource(loggedInUserEmail, userType,regSource)
-		    .orElseThrow(() -> new ResourceNotFoundException("User not found: " + loggedInUserEmail));
+				.orElseThrow(() -> new ResourceNotFoundException("User not found: " + loggedInUserEmail));
 		quotationEntity.setUpdatedBy(user.getBodSeqNo());
 		SiteMeasurement siteMeasurement=siteRepository.findByServiceRequestId(quotationEntity.getReqId());
 		quotationEntity.setReqId(siteMeasurement.getServiceRequestId());
@@ -69,30 +67,33 @@ public class QuotationServiceImpl implements QuotationService {
 		return repository.save(quotationEntity);
 	}
 
+
 	@Override
 	public QuotationEntity updateQuotation(QuotationEntity updatedQuotation,RegSource regSource) {
 		String loggedInUserEmail = AuthDetailsProvider.getLoggedEmail();
 		Collection<? extends GrantedAuthority> loggedInRole = AuthDetailsProvider.getLoggedRole();
 		List<String> roleNames = loggedInRole.stream()
-		        .map(GrantedAuthority::getAuthority)
-		        .map(role -> role.replace("ROLE_", "")) // Remove "ROLE_" prefix
-		        .collect(Collectors.toList());
+				.map(GrantedAuthority::getAuthority)
+				.map(role -> role.replace("ROLE_", ""))
+				.collect(Collectors.toList());
 
 		if (roleNames.equals("Developer")||roleNames.equals("Adm")) {
-		    throw new ResourceNotFoundException("Role Developer not found in: " + roleNames);
+			throw new ResourceNotFoundException("Role Developer not found in: " + roleNames);
 		}
 		UserType userType = UserType.valueOf(roleNames.get(0)); // Make sure roleNames is not empty
 		User user = userDAO.findByEmailAndUserTypeAndRegSource(loggedInUserEmail, userType,regSource)
-		    .orElseThrow(() -> new ResourceNotFoundException("User not found: " + loggedInUserEmail));
-	    QuotationEntity existing = repository.findById(updatedQuotation.getReqId())
-	        .orElseThrow(() -> new EntityNotFoundException("Work assignment not found with recId: " + updatedQuotation.getReqId()));
+				.orElseThrow(() -> new ResourceNotFoundException("User not found: " + loggedInUserEmail));
+		QuotationEntity existing = repository.findById(updatedQuotation.getReqId())
+				.orElseThrow(() -> new EntityNotFoundException("Work assignment not found with recId: " + updatedQuotation.getReqId()));
 
-	    existing.setUpdatedBy(user.getBodSeqNo());
-	    existing.setUpdatedDate(new Date()); // Set current date/time
-	    existing.setStatus(updatedQuotation.getStatus());
-	    existing.setQuotedAmount(updatedQuotation.getQuotedAmount());
-	    return repository.save(existing);
+		existing.setUpdatedBy(user.getBodSeqNo());
+		existing.setUpdatedDate(new Date());
+		existing.setStatus(updatedQuotation.getStatus());
+		existing.setQuotedAmount(updatedQuotation.getQuotedAmount());
+		existing.setRegSource(user.getRegSource());
+		return repository.save(existing);
 	}
+
 
 	@Override
 	public List<QuotationEntity> getQuotation(String reqId, String customerId, String servicePersonId, String updatedBy) {
@@ -116,7 +117,7 @@ public class QuotationServiceImpl implements QuotationService {
 		    }
 		    query.select(root);
 		    if (!predicates.isEmpty()) {
-		        query.where(cb.and(predicates.toArray(new Predicate[0]))); // ✅ FIX: using AND instead of OR
+		        query.where(cb.and(predicates.toArray(new Predicate[0]))); //
 		    }
 
 		    return entityManager.createQuery(query).getResultList();

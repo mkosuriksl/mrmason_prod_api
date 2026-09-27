@@ -10,6 +10,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -17,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.application.mrmason.entity.CustomerRegistration;
 import com.application.mrmason.entity.FrLogin;
 import com.application.mrmason.entity.MaterialSupplierQuotationUser;
+import com.application.mrmason.entity.SuperAdmin;
 import com.application.mrmason.entity.User;
 import com.application.mrmason.enums.RegSource;
 import com.application.mrmason.repository.AdminDetailsRepo;
@@ -24,6 +26,7 @@ import com.application.mrmason.repository.CustomerRegistrationRepo;
 import com.application.mrmason.repository.FrLoginRepo;
 import com.application.mrmason.repository.FrRegRepository;
 import com.application.mrmason.repository.MaterialSupplierQuotationUserDAO;
+import com.application.mrmason.repository.SuperAdminRepository;
 import com.application.mrmason.repository.UserDAO;
 
 import jakarta.servlet.FilterChain;
@@ -45,6 +48,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	@Autowired
 	private AdminDetailsRepo adminDetailsRepo;
+	
+	@Autowired
+	private SuperAdminRepository superAdminRepository;
 	
 	@Autowired
 	private CustomerRegistrationRepo customerRegistrationRepo;
@@ -96,6 +102,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 					if (userType.equals("Adm")) {
 						userDetails = adminDetailsRepo.findByEmail(username);
+					}
+
+					if (userType.equals("SADM")) {
+						SuperAdmin superAdmin = superAdminRepository.findBySuperAdminEmail(username)
+								.orElseThrow(() -> new UsernameNotFoundException("SuperAdmin not found: " + username));
+						userDetails = org.springframework.security.core.userdetails.User.builder()
+								.username(superAdmin.getEmail())
+								.password(superAdmin.getPassword())
+								.roles(superAdmin.getUserType().name())
+								.build();
 					}
 
 					if (userType.equals("EC")) {

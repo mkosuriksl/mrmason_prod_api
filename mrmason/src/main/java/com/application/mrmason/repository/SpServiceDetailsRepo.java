@@ -62,9 +62,14 @@ public interface SpServiceDetailsRepo extends JpaRepository<SpServiceDetails, St
 	@Query("SELECT u FROM SpServiceWithNoOfProject u WHERE u.userServicesId IN :userServicesId")
 	List<SpServiceWithNoOfProject> findAllByUserServicesId(List<String> userServicesId);
 
-	List<SpServiceDetails> findByServiceTypeAndLocationLikeIgnoreCase(String serviceType, String string);
+	@Query("SELECT u FROM SpServiceDetails u WHERE LOWER(TRIM(u.serviceType)) = LOWER(TRIM(:serviceType)) AND LOWER(u.location) LIKE LOWER(CONCAT('%', TRIM(:location), '%'))")
+	List<SpServiceDetails> findByServiceTypeAndLocationLikeIgnoreCase(
+			@Param("serviceType") String serviceType,
+			@Param("location") String location
+	);
 
-	List<SpServiceDetails> findByLocationLikeIgnoreCase(String string);
+	@Query("SELECT u FROM SpServiceDetails u WHERE LOWER(u.location) LIKE LOWER(CONCAT('%', :location, '%'))")
+	List<SpServiceDetails> findByLocationLikeIgnoreCase(@Param("location") String location);
 
 	@Query("SELECT DISTINCT s.location FROM SpServiceDetails s " +
 	           "WHERE (:serviceType IS NULL OR LOWER(s.serviceType) = LOWER(:serviceType)) " +

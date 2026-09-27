@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.application.mrmason.dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,14 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.application.mrmason.dto.GenericResponse;
-import com.application.mrmason.dto.MaterialSupplierHeaderQuotationStatusRequest;
-import com.application.mrmason.dto.MaterialSupplierQuotationCombinedResponse;
-import com.application.mrmason.dto.MaterialSupplierQuotations;
-import com.application.mrmason.dto.QuotationStatusUpdateRequest;
-import com.application.mrmason.dto.ResponseGetMaterialSupplierQuotationdetailsDto;
-import com.application.mrmason.dto.ResponseGetMaterialSupplierQuotationsheaderDto;
-import com.application.mrmason.dto.ResponseInvoiceAndDetailsDto;
 import com.application.mrmason.entity.MaterialSupplier;
 import com.application.mrmason.entity.MaterialSupplierQuotationHeader;
 import com.application.mrmason.entity.MaterialSupplierQuotationHeaderHistory;
@@ -214,5 +207,13 @@ public class MaterialSupplierController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 					.body("Error updating Service Request All Quotation: " + e.getMessage());
 		}
+	}
+
+	@GetMapping("/public_header_detailed")
+	public ResponseEntity<MaterialHeaderAndDetailedDto> getMaterialHeaderAndDetailed(
+			@RequestParam(required = false) String id) {
+
+		MaterialHeaderAndDetailedDto response = materialSupplierService.getMaterialHeaderAndDetailed(id);
+		return ResponseEntity.ok(response);
 	}
 }

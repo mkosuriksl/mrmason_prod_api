@@ -11,28 +11,20 @@ public interface PlumbingMasterService {
     // CREATE
     // ============================================================
 
-    PlumbingMasterResponse createPlumbingMaster(
+    PlumbingMasterResponse create(
             PlumbingMasterRequest request);
 
-    // ============================================================
-    // GET BY ID
-    // ============================================================
-
-    PlumbingMasterResponse getById(
-            String userIdStoreIdSku);
 
     // ============================================================
-    // GET BY STORE
+    // GET FOR MATERIAL SUPPLIER
     // ============================================================
 
-    List<PlumbingMasterResponse> getByStoreId(
-            String storeId);
+    PlumbingMasterResponse getForMs(
+            String storeId,
+            String updatedBy,
+            String productCategory,
+            String productSubCategory);
 
-    // ============================================================
-    // GET ALL
-    // ============================================================
-
-    List<PlumbingMasterResponse> getAll();
 
     // ============================================================
     // UPDATE
@@ -41,4 +33,11 @@ public interface PlumbingMasterService {
     PlumbingMasterResponse update(
             String userIdStoreIdSku,
             PlumbingMasterRequest request);
+
+
+    // ============================================================
+    // GET FOR ALL USERS
+    // ============================================================
+
+    List<PlumbingMasterResponse> getForAll();
 }

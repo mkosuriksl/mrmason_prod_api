@@ -28,19 +28,27 @@ public class MailConfig {
 		AdminMail smtpConfig = mailRepo.findByEmailid("no_reply@kosuriers.com");
 
 		JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-		mailSender.setHost(smtpConfig.getMailHost());
-		mailSender.setPort(Integer.parseInt(smtpConfig.getSmtpPort()));
-		mailSender.setUsername(smtpConfig.getEmailid());
-		String decodedPassword = new String(Base64.getDecoder().decode(smtpConfig.getPwd()));
+		// Use default values if smtpConfig is not found
+		String host = (smtpConfig != null && smtpConfig.getMailHost() != null) ? smtpConfig.getMailHost() : "smtp.test.com";
+		String port = (smtpConfig != null && smtpConfig.getSmtpPort() != null) ? smtpConfig.getSmtpPort() : "587";
+		String emailid = (smtpConfig != null && smtpConfig.getEmailid() != null) ? smtpConfig.getEmailid() : "no_reply@test.com";
+		String pwd = (smtpConfig != null && smtpConfig.getPwd() != null) ? smtpConfig.getPwd() : "c2VjcmV0cGFzc3dvcmQ=";
+		String smtpAuth = (smtpConfig != null && smtpConfig.getSmtpAuth() != null) ? smtpConfig.getSmtpAuth() : "true";
+		String starttls = (smtpConfig != null && smtpConfig.getStarttlsEnable() != null) ? smtpConfig.getStarttlsEnable() : "true";
+
+		mailSender.setHost(host);
+		mailSender.setPort(Integer.parseInt(port));
+		mailSender.setUsername(emailid);
+		String decodedPassword = new String(Base64.getDecoder().decode(pwd));
 		mailSender.setPassword(decodedPassword);
 
 		Properties props = mailSender.getJavaMailProperties();
 		props.put("mail.transport.protocol", "smtp");
-		props.put("mail.smtp.auth", smtpConfig.getSmtpAuth());
+		props.put("mail.smtp.auth", smtpConfig != null ? smtpConfig.getSmtpAuth() : "true");
 		props.put("spring.mail.properties.mail.smtp.ssl.enable", true);
 		//props.put("mail.debug", "true");
 		props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
-		props.put("mail.smtp.starttls.enable", smtpConfig.getStarttlsEnable());
+		props.put("mail.smtp.starttls.enable", smtpConfig != null ? smtpConfig.getStarttlsEnable() : "true");
 		MimeMessage message = mailSender.createMimeMessage();
 		MimeMessageHelper helper = null;
 		try {
@@ -50,7 +58,7 @@ public class MailConfig {
 			e.printStackTrace();
 		}
 		try {
-			helper.setFrom(smtpConfig.getEmailid());
+			helper.setFrom(smtpConfig != null ? smtpConfig.getEmailid() : "no_reply@test.com");
 		} catch (MessagingException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

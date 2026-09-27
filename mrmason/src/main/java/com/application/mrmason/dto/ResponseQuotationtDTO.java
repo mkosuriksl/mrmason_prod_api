@@ -3,10 +3,12 @@ package com.application.mrmason.dto;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
-public class ResponseQuotationtDTO {
+public class ResponseQuotationtDTO<T> {
     private String message;
     private boolean status;
-    private QuotationDTO data;
+    private T data;
 }

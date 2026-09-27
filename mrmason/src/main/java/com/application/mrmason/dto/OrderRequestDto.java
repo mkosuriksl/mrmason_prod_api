@@ -1,5 +1,5 @@
 package com.application.mrmason.dto;
-
+import java.time.LocalDate;
 import java.util.List;
 
 import lombok.Data;
@@ -11,6 +11,8 @@ public class OrderRequestDto {
     private String location;
     private String deliveryMethod;
     private String userIdstoreId;
+    private LocalDate expectedDeliveryDate;
+    private String pincode;
     private List<OrderDetailsDto> orderDetailsList;
 
 }

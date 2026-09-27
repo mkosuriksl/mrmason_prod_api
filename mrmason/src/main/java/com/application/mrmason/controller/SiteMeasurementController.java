@@ -60,26 +60,39 @@ public class SiteMeasurementController {
 	}
 
 	@PostMapping("/add-site-measurement")
-	public ResponseEntity<ResponseSiteMeasurementDTO> addSiteMeasurement(@RequestBody SiteMeasurement measurement,
+	public ResponseEntity<ResponseSiteMeasurementDTO> addSiteMeasurement(
+			@RequestBody List<SiteMeasurement> measurement,
 			@RequestParam(required = false) RegSource regSource) {
+
 		ResponseSiteMeasurementDTO response = new ResponseSiteMeasurementDTO();
+
 		if (regSource == null) {
-	        regSource = RegSource.MRMASON;
-	    }
+			regSource = RegSource.MRMASON;
+		}
+
 		try {
-			SiteMeasurement savedMeasurement = siteMeasurementService.addSiteMeasurement(measurement, regSource);
-			if (savedMeasurement != null) {
+			List<SiteMeasurement> savedMeasurement = siteMeasurementService.addSiteMeasurement(measurement, regSource);
+
+			if (savedMeasurement != null && !savedMeasurement.isEmpty()) {
+				// Map the entire list using streams
+				List<SiteMeasurementDTO> dtoList = savedMeasurement.stream()
+						.map(this::mapToDTO)
+						.collect(Collectors.toList());
+
 				response.setMessage("Site measurement added successfully");
 				response.setStatus(true);
-				response.setData(mapToDTO(savedMeasurement));
-				log.info("Site measurement added for service request: {}", savedMeasurement.getServiceRequestId());
+				response.setData(dtoList);
+
+				log.info("Added {} site measurements successfully", savedMeasurement.size());
 				return ResponseEntity.ok(response);
 			}
+
 			response.setMessage("Failed to add site measurement");
 			response.setStatus(false);
 			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+
 		} catch (Exception e) {
-			log.error("Error adding site measurement: {}", e.getMessage());
+			log.error("Error adding site measurement: {}", e.getMessage(), e);
 			response.setMessage(e.getMessage());
 			response.setStatus(false);
 			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);

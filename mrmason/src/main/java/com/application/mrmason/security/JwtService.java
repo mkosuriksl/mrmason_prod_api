@@ -91,6 +91,8 @@ public class JwtService {
 			return UserType.Developer;
 		} else if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_EC"))) {
 			return UserType.EC;
+		} else if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_SADM"))) {
+			return UserType.SADM;
 		} else if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_Adm"))) {
 			return UserType.Adm;
 		}else if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_MS"))) {
@@ -159,5 +161,4 @@ public class JwtService {
 		return new org.springframework.security.core.userdetails.User(registration.getFrEmail(),
 				registration.getPassword(), authorities);
 	}
-
 }

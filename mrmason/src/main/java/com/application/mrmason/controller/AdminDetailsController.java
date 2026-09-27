@@ -29,7 +29,6 @@ import com.application.mrmason.service.AdminDetailsService;
 public class AdminDetailsController {
 	@Autowired
 	public AdminDetailsService adminService;
-	ResponseListAdminDetailsDto response=new ResponseListAdminDetailsDto();
 	
 	ResponseMessageDto response2 = new ResponseMessageDto();
 	@PostMapping("/addAdminDetails")

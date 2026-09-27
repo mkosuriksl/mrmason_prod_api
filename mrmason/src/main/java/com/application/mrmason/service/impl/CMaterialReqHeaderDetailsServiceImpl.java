@@ -12,6 +12,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.application.mrmason.dto.*;
+import com.application.mrmason.entity.*;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -26,20 +28,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.application.mrmason.dto.CMaterialReqHeaderDetailsDTO;
-import com.application.mrmason.dto.CMaterialReqHeaderDetailsDTO2;
-import com.application.mrmason.dto.CMaterialReqHeaderDetailsResponseDTO;
-import com.application.mrmason.dto.CMaterialRequestHeaderDTO2;
-import com.application.mrmason.dto.CMaterialRequestHeaderWithCategoryDto;
-import com.application.mrmason.dto.CommonMaterialRequestDto;
-import com.application.mrmason.dto.ResponseCMaterialReqHeaderDetailsDto;
-import com.application.mrmason.entity.AdminDetails;
-import com.application.mrmason.entity.CMaterialReqHeaderDetailsEntity;
-import com.application.mrmason.entity.CMaterialRequestHeaderEntity;
-import com.application.mrmason.entity.CustomerRegistration;
-import com.application.mrmason.entity.MaterialSupplierQuotationUser;
-import com.application.mrmason.entity.User;
-import com.application.mrmason.entity.UserType;
 import com.application.mrmason.enums.RegSource;
 import com.application.mrmason.exceptions.ResourceNotFoundException;
 import com.application.mrmason.repository.AdminDetailsRepo;
@@ -1223,6 +1211,7 @@ public class CMaterialReqHeaderDetailsServiceImpl implements CMaterialReqHeaderD
 
 		return new UserInfo(userId, role);
 	}
-	
+
+
 	
 }

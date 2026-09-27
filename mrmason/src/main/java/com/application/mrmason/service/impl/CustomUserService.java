@@ -1,6 +1,9 @@
 package com.application.mrmason.service.impl;
 
+import com.application.mrmason.entity.SuperAdmin;
+import com.application.mrmason.repository.SuperAdminRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -13,6 +16,7 @@ import com.application.mrmason.repository.AdminDetailsRepo;
 import com.application.mrmason.repository.CustomerRegistrationRepo;
 import com.application.mrmason.repository.UserDAO;
 
+import java.util.Collections;
 
 
 @Service
@@ -26,9 +30,20 @@ public class CustomUserService implements UserDetailsService {
 
 	@Autowired
 	private AdminDetailsRepo adminDetailsRepo;
+	@Autowired
+	private SuperAdminRepository superAdminRepository;
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+
+		SuperAdmin superAdmin = superAdminRepository.findBySuperAdminEmail(username).orElse(null);
+		if (superAdmin != null) {
+			return new org.springframework.security.core.userdetails.User(
+					superAdmin.getEmail(),
+					superAdmin.getPassword(),
+					Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + superAdmin.getUserType().name()))
+			);
+		}
 
 		CustomerRegistration customerOptional = customerRegistrationRepo.findByUserEmailOrUserMobile(username,
 				username);
