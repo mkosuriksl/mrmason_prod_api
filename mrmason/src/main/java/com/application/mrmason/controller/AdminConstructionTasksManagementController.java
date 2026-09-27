@@ -57,13 +57,17 @@ public class AdminConstructionTasksManagementController {
 
 	@GetMapping("/get-construction-tasks")
 	public ResponseEntity<ResponseGetAdminConstructionTasksManagementDto> getTask(
-			@RequestParam(required = false) String serviceCategory, @RequestParam(required = false) String taskName,
-			@RequestParam(required = false) String taskId, @RequestParam(required = false) String adminTaskId,
-			@RequestParam(required = false) RegSource regSource, @RequestParam(defaultValue = "0") int page,
+			@RequestParam(required = false) String serviceCategory,
+			@RequestParam(required = false) String taskName,
+			@RequestParam (required = false) String serviceSubcategory,
+			@RequestParam(required = false) String taskId,
+			@RequestParam(required = false) String adminTaskId,
+			@RequestParam(required = false) RegSource regSource,
+			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) throws AccessDeniedException {
 
 		Pageable pageable = PageRequest.of(page, size);
-		Page<AdminConstructionTasksManagement> srpqPage = service.getAdmin(serviceCategory, taskName, taskId,
+		Page<AdminConstructionTasksManagement> srpqPage = service.getAdmin(serviceCategory, serviceSubcategory, taskName, taskId,
 				adminTaskId, regSource, pageable);
 		ResponseGetAdminConstructionTasksManagementDto response = new ResponseGetAdminConstructionTasksManagementDto();
 

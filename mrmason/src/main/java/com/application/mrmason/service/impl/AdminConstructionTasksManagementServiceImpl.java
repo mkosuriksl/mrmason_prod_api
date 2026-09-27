@@ -133,8 +133,8 @@ public class AdminConstructionTasksManagementServiceImpl implements AdminConstru
 	}
 
 	@Override
-	public Page<AdminConstructionTasksManagement> getAdmin(String serviceCategory,
-			String taskName, String taskId, String adminTaskId, RegSource regSource, Pageable pageable)
+	public Page<AdminConstructionTasksManagement> getAdmin(String serviceCategory, String serviceSubcategory, String taskName,
+			String taskId, String adminTaskId, RegSource regSource, Pageable pageable)
 			throws AccessDeniedException {
 		UserInfo userInfo = getLoggedInAdminSPInfo(regSource);
 
@@ -151,6 +151,9 @@ public class AdminConstructionTasksManagementServiceImpl implements AdminConstru
 
 		if (serviceCategory != null && !serviceCategory.trim().isEmpty()) {
 			predicates.add(cb.equal(root.get("serviceCategory"), serviceCategory));
+		}
+		if (serviceSubcategory != null && !serviceSubcategory.trim().isEmpty()) {
+			predicates.add(cb.equal(root.get("serviceSubcategory"), serviceSubcategory));
 		}
 		if (taskName != null && !taskName.trim().isEmpty()) {
 			predicates.add(cb.equal(root.get("taskName"), taskName));
@@ -174,6 +177,9 @@ public class AdminConstructionTasksManagementServiceImpl implements AdminConstru
 
 		if (serviceCategory != null && !serviceCategory.trim().isEmpty()) {
 			countPredicates.add(cb.equal(countRoot.get("serviceCategory"), serviceCategory));
+		}
+		if (serviceSubcategory != null && !serviceSubcategory.trim().isEmpty()) {
+			countPredicates.add(cb.equal(countRoot.get("serviceSubcategory"), serviceSubcategory));
 		}
 		if (taskName != null && !taskName.trim().isEmpty()) {
 			countPredicates.add(cb.equal(countRoot.get("taskName"), taskName));

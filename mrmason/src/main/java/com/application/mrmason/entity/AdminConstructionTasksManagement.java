@@ -31,6 +31,9 @@ public class AdminConstructionTasksManagement {
 	@Column(name = "service_category")
 	private String serviceCategory;
 
+	@Column(name = "service_subcategory")
+	private String serviceSubcategory;
+
 	@Column(name = "task_name")
 	private String taskName;
 
