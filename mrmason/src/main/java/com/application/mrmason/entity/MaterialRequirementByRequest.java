@@ -24,8 +24,6 @@ public class MaterialRequirementByRequest {
     @Column(name = "req_id_line_id", unique = true)
     private String reqIdLineId;
 
-
-
     @Column(name = "material_category")
     private String materialCategory;
 
