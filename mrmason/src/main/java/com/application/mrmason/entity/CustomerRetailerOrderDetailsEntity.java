@@ -22,6 +22,9 @@ public class CustomerRetailerOrderDetailsEntity {
     
     private String customerCartOrderLineId;
 	private String brand;
+    private String modelName;
+    private String materialCategory;
+    private String materialSubCategory;
     private int orderQty;
     private Double mrp;
     private float discount;
