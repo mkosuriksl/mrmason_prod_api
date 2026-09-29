@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.Collections;
 
 import com.application.mrmason.dto.*;
 import org.modelmapper.ModelMapper;
@@ -30,6 +31,8 @@ import com.application.mrmason.repository.AdminMaterialMasterRepository;
 import com.application.mrmason.repository.CustomerRegistrationRepo;
 import com.application.mrmason.repository.MaterialMasterRepository;
 import com.application.mrmason.security.AuthDetailsProvider;
+// import com.application.mrmason.repository.CustomerOrderDetailsRepo;
+// import com.application.mrmason.repository.CustomerOrderHdrRepo;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
@@ -382,9 +385,14 @@ public class CustomerOrderMethodHandler {
 	public GenericResponse<List<CustomerGetOrderResponseDTO>> getOrderDetailByCustomerId(String customerId,
 			Integer page, Integer size) {
 
+				
 		// 1️⃣ Fetch all records for given customerId
-		List<CustomerOrderDetailsEntity> allEntities = orderDetailsRepo
+		List<CustomerOrderDetailsEntity> allEntities = orderDetailsRepo  
 				.findByCustomerOrderOrderHdrEntity_UpdatedBy(customerId);
+
+        
+
+
 
 		if (allEntities.isEmpty()) {
 			return new GenericResponse<>("No records found for customerId: " + customerId, false, null);
@@ -435,5 +443,72 @@ public class CustomerOrderMethodHandler {
 
 		return new GenericResponse<>("Customer orders retrieved successfully.", true, pagedOrders);
 	}
+
+    public GenericResponse<List<CustomerOrderDetailsDto>> getActiveCartByCustomerId(
+        String customerId, Integer page, Integer size) {
+
+    // 1. Fetch only active cart items.
+    // This query should filter status = 0.
+    Optional<CustomerOrderHdrEntity> activeCart =
+            orderDetailsRepo.findActiveCartByUpdatedBy(customerId);
+
+    // 2. No cart items found
+    if (activeCart.isEmpty()) {
+        return new GenericResponse<>(
+                "No records found for customerId: " + customerId,
+                false,
+                null
+        );
+    }
+
+    // 3. Convert Entity objects to DTOs
+    List<CustomerOrderDetailsDto> allCartItems = activeCart.get().getCustomerOrderDetailsEntities().stream()
+            .map(entity -> modelMapper.map(
+                    entity,
+                    CustomerOrderDetailsDto.class
+            ))
+            .collect(Collectors.toList());
+
+    // 4. Pagination
+    int totalElements = allCartItems.size();
+
+    int totalPages = (int) Math.ceil(
+            (double) totalElements / size
+    );
+
+    int fromIndex = page * size;
+
+    // Requested page is outside available data
+    if (fromIndex >= totalElements) {
+        return new GenericResponse<>(
+                "No records found for requested page.",
+                true,
+                Collections.emptyList()
+        );
+    }
+
+    int toIndex = Math.min(
+            fromIndex + size,
+            totalElements
+    );
+
+    List<CustomerOrderDetailsDto> pagedCartItems =
+            allCartItems.subList(fromIndex, toIndex);
+
+    // 5. Return cart items
+    return new GenericResponse<>(
+            "Active cart items retrieved successfully.",
+            true,
+            pagedCartItems
+    );
+}
+
+
+
+
+
+
+
+
 
 }

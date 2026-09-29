@@ -102,12 +102,13 @@ public class CustomerOrderMethodController {
 	}
 
 	@GetMapping("/get-customer-cart")
-	public GenericResponse<List<CustomerGetOrderResponseDTO>> getOrdersByCustomerId(
+	public GenericResponse<List<CustomerOrderDetailsDto>> getOrdersByCustomerId(
 	        @RequestParam String cId,
 	        @RequestParam(defaultValue = "0") int page,
 	        @RequestParam(defaultValue = "10") int size) {
 
-	    return orderMethodHandler.getOrderDetailByCustomerId(cId, page, size);
+	   // return orderMethodHandler.getOrderDetailByCustomerId(cId, page, size);
+		return orderMethodHandler.getActiveCartByCustomerId(cId, page, size);
 	}
 
 }
