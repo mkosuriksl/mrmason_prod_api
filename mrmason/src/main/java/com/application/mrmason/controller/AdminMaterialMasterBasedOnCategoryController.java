@@ -1,3 +1,4 @@
+
 package com.application.mrmason.controller;
 
 import java.nio.file.AccessDeniedException;
@@ -33,9 +34,12 @@ import com.application.mrmason.service.AdminMaterialMasterBasedOnCategoryService
 @RequestMapping("/admin-material-master")
 public class AdminMaterialMasterBasedOnCategoryController {
 
-	@Autowired
-	private AdminMaterialMasterBasedOnCategoryService adminMaterialMasterService;
+    @Autowired
+    private AdminMaterialMasterBasedOnCategoryService adminMaterialMasterService;
 
+    // =========================================================
+    // CREATE MATERIAL MASTER
+    // =========================================================
     @PostMapping
     public ResponseEntity<?> createAdminMaterialMaster(
 
@@ -48,9 +52,6 @@ public class AdminMaterialMasterBasedOnCategoryController {
             @RequestParam("regSource")
             RegSource regSource,
 
-            @RequestParam(value = "storeId", required = false)
-            String storeId,
-
             @RequestBody
             List<MaterialGroupDTO> requestGroups)
 
@@ -61,95 +62,228 @@ public class AdminMaterialMasterBasedOnCategoryController {
                         requestGroups,
                         materialCategory,
                         materialSubCategory,
-                        regSource,
-                        storeId);
+                        regSource);
 
         return ResponseEntity.ok(result);
     }
 
-	@PutMapping("/update-by-category")
+    // =========================================================
+    // UPDATE MATERIAL MASTER
+    // =========================================================
+    @PutMapping("/update-by-category")
+    public ResponseEntity<GenericResponse<List<AdminMaterialMaster>>> updateAdminMaterialMasters(
 
-	public ResponseEntity<GenericResponse<List<AdminMaterialMaster>>> updateAdminMaterialMasters(
-			@RequestBody AdminMaterialMasterRequestDTO requestDTO, @RequestParam("regSource") RegSource regSource)
-			throws AccessDeniedException {
+            @RequestBody
+            AdminMaterialMasterRequestDTO requestDTO,
 
-		List<AdminMaterialMaster> updatedMaterials = adminMaterialMasterService
-				.updateAdminMaterialMasters(requestDTO.getMaterials(), regSource);
-		GenericResponse<List<AdminMaterialMaster>> response = new GenericResponse<>(
-				"Material Master Saved Successfully", true, updatedMaterials);
-		return ResponseEntity.ok(response);
-	}
+            @RequestParam("regSource")
+            RegSource regSource)
 
-	@GetMapping("/get-materials")
-	public ResponseEntity<ResponseGetAdminMaterialMasterDto> getServiceRequestPaintQuotationService(
-			@RequestParam(required = false) String materialCategory,
-			@RequestParam(required = false) String materialSubCategory, @RequestParam(required = false) String brand,
-			@RequestParam(required = false) String modelNo, @RequestParam(required = false) String brandsize,
-			@RequestParam(required = false) String shape, @RequestParam(required = false) String userId,
-			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size,
-			@RequestParam(required = false) Map<String, String> requestParams)
-			throws AccessDeniedException {
+            throws AccessDeniedException {
 
-		Pageable pageable = PageRequest.of(page, size);
-		Page<AdminMaterialMasterResponseWithImageDto> srpqPage = adminMaterialMasterService.getAdminMaterialMaster(materialCategory,
-				materialSubCategory, brand, modelNo, brandsize, shape, userId, pageable,requestParams);
-		ResponseGetAdminMaterialMasterDto response = new ResponseGetAdminMaterialMasterDto();
+        List<AdminMaterialMaster> updatedMaterials =
+                adminMaterialMasterService.updateAdminMaterialMasters(
+                        requestDTO.getMaterials(),
+                        regSource);
 
-		response.setMessage("Material Master details retrieved successfully.");
-		response.setStatus(true);
-		response.setGetAdminMaterialMaster(srpqPage.getContent());
+        GenericResponse<List<AdminMaterialMaster>> response =
+                new GenericResponse<>(
+                        "Material Master Saved Successfully",
+                        true,
+                        updatedMaterials);
 
-		// Set pagination fields
-		response.setCurrentPage(srpqPage.getNumber());
-		response.setPageSize(srpqPage.getSize());
-		response.setTotalElements(srpqPage.getTotalElements());
-		response.setTotalPages(srpqPage.getTotalPages());
+        return ResponseEntity.ok(response);
+    }
 
-		return new ResponseEntity<>(response, HttpStatus.OK);
-	}
+    // =========================================================
+    // GET MATERIALS
+    // =========================================================
+    @GetMapping("/get-materials")
+    public ResponseEntity<ResponseGetAdminMaterialMasterDto> getServiceRequestPaintQuotationService(
 
-	@PostMapping("upload_mat_images")
-	public ResponseEntity<?> uploadCabDocs(@RequestParam("skuId") String skuId,
-			@RequestParam("regSource") RegSource regSource,
-			@RequestParam(value = "materialMasterImage1", required = false) MultipartFile materialMasterImage1,
-			@RequestParam(value = "materialMasterImage2", required = false) MultipartFile materialMasterImage2,
-			@RequestParam(value = "materialMasterImage3", required = false) MultipartFile materialMasterImage3,
-			@RequestParam(value = "materialMasterImage4", required = false) MultipartFile materialMasterImage4,
-			@RequestParam(value = "materialMasterImage5", required = false) MultipartFile materialMasterImage5)
-			throws AccessDeniedException {
-		return adminMaterialMasterService.uploadDoc(regSource, skuId, materialMasterImage1, materialMasterImage2,
-				materialMasterImage3, materialMasterImage4, materialMasterImage5);
-	}
+            @RequestParam(required = false)
+            String materialCategory,
 
-	@GetMapping("/get-brands-by-materialcategory")
-	public ResponseEntity<List<String>> getDistinctLocations(@RequestParam String materialCategory,
-			@RequestParam String materialSubCategory,
-			@RequestParam(required = false) Map<String, String> requestParams) {
-		List<String> distinctLocations = adminMaterialMasterService
-				.findDistinctBrandByMaterialCategory(materialCategory,materialSubCategory ,requestParams);
+            @RequestParam(required = false)
+            String materialSubCategory,
 
-		if (distinctLocations.isEmpty()) {
-			return ResponseEntity.noContent().build(); // Return 204 if no data found
-		}
+            @RequestParam(required = false)
+            String brand,
 
-		return ResponseEntity.ok(distinctLocations); // Return 200 OK with the list of locations
-	}
+            @RequestParam(required = false)
+            String modelNo,
 
-	@GetMapping("/distinct-materials-category")
-	public ResponseEntity<List<Map<String, Object>>> getDistinctMaterialCategory() {
-	    List<Map<String, Object>> categories = adminMaterialMasterService.findDistinctMaterialCategoryWithSubCategory();
-	    return ResponseEntity.ok(categories);
-	}
-//	public ResponseEntity<List<String>> getDistinctMaterialCategory() {
-//		List<String> types = adminMaterialMasterService.findDistinctMaterialCategory();
-//		return ResponseEntity.ok(types);
-//	}
+            @RequestParam(required = false)
+            String brandsize,
 
-	@GetMapping("/home-searching")
-	public AdminMaterialMasterResponseDTO searchMaterials(@RequestParam(required = false) String materialCategory,
-			@RequestParam(required = false) String materialSubCategory, @RequestParam(required = false) String brand,
-			@RequestParam(required = false) String location) {
-		return adminMaterialMasterService.getMaterialsWithUserInfo(materialCategory, materialSubCategory, brand,
-				location);
-	}
+            @RequestParam(required = false)
+            String shape,
+
+            @RequestParam(required = false)
+            String userId,
+
+            @RequestParam(defaultValue = "0")
+            int page,
+
+            @RequestParam(defaultValue = "10")
+            int size,
+
+            @RequestParam(required = false)
+            Map<String, String> requestParams)
+
+            throws AccessDeniedException {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<AdminMaterialMasterResponseWithImageDto> srpqPage =
+                adminMaterialMasterService.getAdminMaterialMaster(
+                        materialCategory,
+                        materialSubCategory,
+                        brand,
+                        modelNo,
+                        brandsize,
+                        shape,
+                        userId,
+                        pageable,
+                        requestParams);
+
+        ResponseGetAdminMaterialMasterDto response =
+                new ResponseGetAdminMaterialMasterDto();
+
+        response.setMessage(
+                "Material Master details retrieved successfully.");
+
+        response.setStatus(true);
+
+        response.setGetAdminMaterialMaster(
+                srpqPage.getContent());
+
+        response.setCurrentPage(
+                srpqPage.getNumber());
+
+        response.setPageSize(
+                srpqPage.getSize());
+
+        response.setTotalElements(
+                srpqPage.getTotalElements());
+
+        response.setTotalPages(
+                srpqPage.getTotalPages());
+
+        return new ResponseEntity<>(
+                response,
+                HttpStatus.OK);
+    }
+
+    // =========================================================
+    // UPLOAD MATERIAL IMAGES
+    // =========================================================
+    @PostMapping("/upload_mat_images")
+    public ResponseEntity<?> uploadCabDocs(
+
+            @RequestParam("skuId")
+            String skuId,
+
+            @RequestParam("regSource")
+            RegSource regSource,
+
+            @RequestParam(value = "materialMasterImage1", required = false)
+            MultipartFile materialMasterImage1,
+
+            @RequestParam(value = "materialMasterImage2", required = false)
+            MultipartFile materialMasterImage2,
+
+            @RequestParam(value = "materialMasterImage3", required = false)
+            MultipartFile materialMasterImage3,
+
+            @RequestParam(value = "materialMasterImage4", required = false)
+            MultipartFile materialMasterImage4,
+
+            @RequestParam(value = "materialMasterImage5", required = false)
+            MultipartFile materialMasterImage5)
+
+            throws AccessDeniedException {
+
+        return adminMaterialMasterService.uploadDoc(
+                regSource,
+                skuId,
+                materialMasterImage1,
+                materialMasterImage2,
+                materialMasterImage3,
+                materialMasterImage4,
+                materialMasterImage5);
+    }
+
+    // =========================================================
+    // GET BRANDS BY CATEGORY
+    // =========================================================
+    @GetMapping("/get-brands-by-materialcategory")
+    public ResponseEntity<List<String>> getDistinctLocations(
+
+            @RequestParam
+            String materialCategory,
+
+            @RequestParam
+            String materialSubCategory,
+
+            @RequestParam(required = false)
+            Map<String, String> requestParams)
+
+            throws AccessDeniedException {
+
+        List<String> distinctLocations =
+                adminMaterialMasterService.findDistinctBrandByMaterialCategory(
+                        materialCategory,
+                        materialSubCategory,
+                        requestParams);
+
+        if (distinctLocations.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(distinctLocations);
+    }
+
+    // =========================================================
+    // GET DISTINCT MATERIAL CATEGORIES
+    // =========================================================
+    @GetMapping("/distinct-materials-category")
+    public ResponseEntity<List<Map<String, Object>>> getDistinctMaterialCategory()
+
+            throws AccessDeniedException {
+
+        List<Map<String, Object>> categories =
+                adminMaterialMasterService
+                        .findDistinctMaterialCategoryWithSubCategory();
+
+        return ResponseEntity.ok(categories);
+    }
+
+    // =========================================================
+    // HOME SEARCH
+    // =========================================================
+    @GetMapping("/home-searching")
+    public AdminMaterialMasterResponseDTO searchMaterials(
+
+            @RequestParam(required = false)
+            String materialCategory,
+
+            @RequestParam(required = false)
+            String materialSubCategory,
+
+            @RequestParam(required = false)
+            String brand,
+
+            @RequestParam(required = false)
+            String location)
+
+            throws AccessDeniedException {
+
+        return adminMaterialMasterService.getMaterialsWithUserInfo(
+                materialCategory,
+                materialSubCategory,
+                brand,
+                location);
+    }
 }
+
