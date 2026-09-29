@@ -29,10 +29,11 @@ public interface CustomerOrderDetailsRepo extends JpaRepository<CustomerOrderDet
 @Query("""
     SELECT c
     FROM CustomerOrderHdrEntity c
+    LEFT JOIN FETCH c.customerOrderDetailsEntities
     WHERE c.updatedBy = :updatedBy
       AND c.status = 0
 """)
-    Optional<CustomerOrderHdrEntity> findActiveCartByUpdatedBy(
+Optional<CustomerOrderHdrEntity> findActiveCartByUpdatedBy(
         @Param("updatedBy") String updatedBy
 );
 
