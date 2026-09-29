@@ -1,8 +1,6 @@
 package com.application.mrmason.controller;
 
-import com.application.mrmason.dto.GenericResponse;
-import com.application.mrmason.dto.StoreCategoryBrandMasterRequestDto;
-import com.application.mrmason.dto.StoreCategoryBrandMasterResponseDto;
+import com.application.mrmason.dto.*;
 import com.application.mrmason.service.StoreCategoryBrandMasterService;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -91,6 +89,30 @@ public class StoreCategoryBrandMasterController {
                     error = GenericResponse.<Optional<StoreCategoryBrandMasterResponseDto>>builder()
                     .data(null)
                     .message("Unable to update store category " + e.getMessage())
+                    .success(false)
+                    .build();
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/get-store-location")
+    public ResponseEntity<GenericResponse<StoreMasterLocationResponseDto>> getStoresLocation(StoreMasterLocationRequestDto dto){
+
+        try {
+            StoreMasterLocationResponseDto response = storeCategoryBrandMasterService.getStoreLocation(dto);
+
+            GenericResponse<StoreMasterLocationResponseDto>
+                    genericResponse = GenericResponse.<StoreMasterLocationResponseDto>builder()
+                    .data(response)
+                    .message("Fetched stores location successfully")
+                    .success(true)
+                    .build();
+            return new ResponseEntity<>(genericResponse, HttpStatus.OK);
+        }catch (Exception e){
+            GenericResponse<StoreMasterLocationResponseDto>
+                    error = GenericResponse.<StoreMasterLocationResponseDto>builder()
+                    .data(null)
+                    .message("Unable to fetch store location " + e.getMessage())
                     .success(false)
                     .build();
             return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);

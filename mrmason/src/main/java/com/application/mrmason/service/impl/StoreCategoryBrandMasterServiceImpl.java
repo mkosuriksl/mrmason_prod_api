@@ -3,27 +3,26 @@ package com.application.mrmason.service.impl;
 
 import com.application.mrmason.dto.StoreCategoryBrandMasterRequestDto;
 import com.application.mrmason.dto.StoreCategoryBrandMasterResponseDto;
+import com.application.mrmason.dto.StoreMasterLocationRequestDto;
+import com.application.mrmason.dto.StoreMasterLocationResponseDto;
 import com.application.mrmason.entity.AdminDetails;
 import com.application.mrmason.entity.MaterialSupplierQuotationUser;
 import com.application.mrmason.entity.StoreCategoryBrandMaster;
+import com.application.mrmason.entity.StoreMaster;
 import com.application.mrmason.repository.AdminDetailsRepo;
 import com.application.mrmason.repository.MaterialSupplierQuotationUserDAO;
 import com.application.mrmason.repository.StoreCategoryBrandMasterRepository;
+import com.application.mrmason.repository.StoreMasterRepository;
 import com.application.mrmason.service.StoreCategoryBrandMasterService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.*;
 
-import static com.fasterxml.jackson.databind.type.LogicalType.Map;
 
 @Slf4j
 @Service
@@ -33,6 +32,7 @@ public class StoreCategoryBrandMasterServiceImpl implements StoreCategoryBrandMa
     private final StoreCategoryBrandMasterRepository storeCategoryBrandMasterRepository;
     private final MaterialSupplierQuotationUserDAO materialSupplierQuotationUserDAO;
     private final AdminDetailsRepo adminDetailsRepo;
+    private final StoreMasterRepository storeMasterRepository;
 
     @Override
     public List<StoreCategoryBrandMasterResponseDto> createStoreCategoryBrandMaster(List<StoreCategoryBrandMasterRequestDto> dtoList) {
@@ -40,8 +40,6 @@ public class StoreCategoryBrandMasterServiceImpl implements StoreCategoryBrandMa
         if(dtoList==null||dtoList.isEmpty()){
             return new ArrayList<>();
         }
-
-        StoreCategoryBrandMasterRequestDto previousStore = dtoList.get(0);
 
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
@@ -59,25 +57,35 @@ public class StoreCategoryBrandMasterServiceImpl implements StoreCategoryBrandMa
         if(creatorId == null){
             throw  new RuntimeException("Authorization failed: No user found for email " + currentEmail);
         }
+        String prefixedStoreId = "STR" + dtoList.get(0).getStoreId();
+        boolean storeIdExist = storeCategoryBrandMasterRepository.existsByStoreId(prefixedStoreId);
+
+        if(storeIdExist){
+            throw  new RuntimeException("Store id is already exist " + dtoList.get(0).getStoreId());
+        }
 
         LocalDate currentDate = LocalDate.now();
-        int currentCounter = fetchLatestStoreNumber();
+
+
 
         List<StoreCategoryBrandMaster> recordsToSave =   new ArrayList<>();
 
         for(StoreCategoryBrandMasterRequestDto dto : dtoList){
 
-            String storeId = String.format("STR%04d", currentCounter);
+            String storeIdWithPrefix = "STR" + dto.getStoreId();
+
+            String storeUserId = storeIdWithPrefix + "_" + creatorId;
 
                 String primaryKey = String.format("%s_%s_%s_%s",
-                        storeId,
+                        storeUserId,
                         dto.getMaterialCategory(),
                         dto.getSubMaterialCategory(),
                         dto.getBrand());
 
                 StoreCategoryBrandMaster entity = StoreCategoryBrandMaster.builder()
                         .storeCategorySubMaterialCategoryBrand(primaryKey)
-                        .storeId(storeId)
+                        .storeIdUserId(storeUserId)
+                        .storeId(storeIdWithPrefix)
                         .materialCategory(dto.getMaterialCategory())
                         .subMaterialCategory(dto.getSubMaterialCategory())
                         .brand(dto.getBrand())
@@ -89,18 +97,6 @@ public class StoreCategoryBrandMasterServiceImpl implements StoreCategoryBrandMa
         List<StoreCategoryBrandMaster> savedEntities = storeCategoryBrandMasterRepository.saveAll(recordsToSave);
 
         return mapToResponseDtoList(savedEntities);
-    }
-
-    private int fetchLatestStoreNumber() {
-        return storeCategoryBrandMasterRepository.findByStoreId()
-                .map(lastId -> {
-                    try {
-                        return Integer.parseInt(lastId.replace("STR", "").trim());
-                    } catch (NumberFormatException e) {
-                        return 0;
-                    }
-                })
-                .orElse(0);
     }
 
 
@@ -140,6 +136,7 @@ public class StoreCategoryBrandMasterServiceImpl implements StoreCategoryBrandMa
         }
             StoreCategoryBrandMasterResponseDto responseDto = StoreCategoryBrandMasterResponseDto.builder()
                     .storeId(firstRecord.getStoreId())
+                    .storeIdUserId(firstRecord.getStoreIdUserId())
                     .updatedBy(firstRecord.getUpdatedBy())
                     .updatedDate(firstRecord.getUpdatedDate())
                     .data(materialCategoryDtos)
@@ -218,4 +215,53 @@ public class StoreCategoryBrandMasterServiceImpl implements StoreCategoryBrandMa
 
         return dtoList.isEmpty() ? Optional.empty() : Optional.of(dtoList.get(0));
     }
+
+    @Override
+    public StoreMasterLocationResponseDto getStoreLocation(StoreMasterLocationRequestDto dto) {
+
+        List<String> storeIdUserIds = storeCategoryBrandMasterRepository.findStoreIdUserIdsByFilters(
+                dto.getMaterialCategory(),
+                dto.getSubMaterialCategory(),
+                dto.getBrand()
+        );
+
+        if (storeIdUserIds.isEmpty()) {
+            return new StoreMasterLocationResponseDto(Collections.emptyList());
+        }
+
+        List<StoreMaster> storeMasters = storeMasterRepository.findByStoreIdUserIdIn(storeIdUserIds);
+
+        List<String> formattedLocations = new ArrayList<>();
+
+        for (StoreMaster sm : storeMasters) {
+            String town = filterNull(sm.getTown());
+            String district = filterNull(sm.getDistrict());
+            String state = filterNull(sm.getState());
+            String pincode = filterNull(sm.getPincode());
+
+            StringJoiner joiner = new StringJoiner(", ");
+            if(!town.isEmpty()) joiner.add(town);
+            if(!district.isEmpty()) joiner.add(district);
+            if (!state.isEmpty()) joiner.add(state);
+
+
+            String address =  joiner.toString();
+
+            if(!pincode.isEmpty()){
+                address = address.isEmpty() ? pincode : address + " - " + pincode;
+            }
+
+            if(!address.isEmpty()){
+                formattedLocations.add(address);
+            }
+
+        }
+
+        return new StoreMasterLocationResponseDto(formattedLocations);
+    }
+
+    private String filterNull(String value) {
+        return value != null ? value : "";
+    }
+
 }

@@ -19,6 +19,9 @@ import java.time.LocalDate;
 @Table(name = "store_category_brand_master")
 public class StoreCategoryBrandMaster {
 
+    @Column(name = "storeid_userid")
+    private String storeIdUserId;
+
     @Id
     @Column(name = "storeid_mc_sub_mc_brand")
     private String storeCategorySubMaterialCategoryBrand;

@@ -28,4 +28,18 @@ public interface StoreCategoryBrandMasterRepository extends JpaRepository<StoreC
 
     @Query("SELECT m FROM StoreCategoryBrandMaster m WHERE m.storeId = :storeId")
     Optional<StoreCategoryBrandMaster> findByStoreId(@Param("storeId") String storeId);
+
+    Boolean existsByStoreId(@Param("storeId") String storeId);
+
+    @Query("SELECT DISTINCT m.storeIdUserId FROM StoreCategoryBrandMaster m " +
+            "WHERE (:materialCategory IS NULL OR m.materialCategory = :materialCategory) " +
+            "AND (:subMaterialCategory IS NULL OR m.subMaterialCategory = :subMaterialCategory) " +
+            "AND (:brand IS NULL OR m.brand = :brand)")
+    List<String> findStoreIdUserIdsByFilters(
+            @Param("materialCategory") String materialCategory,
+            @Param("subMaterialCategory") String subMaterialCategory,
+            @Param("brand") String brand);
+
+
 }
+

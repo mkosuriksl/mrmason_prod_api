@@ -14,6 +14,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class StoreCategoryBrandMasterRequestDto {
 
+
+    @JsonProperty("storeid_userid")
+    private String storeIdUserId;
+
     @JsonProperty("storeid_mc_sub_mc_brand")
     private String storeCategorySubMaterialCategoryBrand;
 

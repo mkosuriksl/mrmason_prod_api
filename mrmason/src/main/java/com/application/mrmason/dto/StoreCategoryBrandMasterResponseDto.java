@@ -1,6 +1,7 @@
 package com.application.mrmason.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +18,9 @@ public class StoreCategoryBrandMasterResponseDto {
 
     @JsonProperty("store_id")
     private String storeId;
+
+    @JsonProperty("storeid_userid")
+    private String storeIdUserId;
 
     @JsonProperty("updated_by")
     private String updatedBy;
