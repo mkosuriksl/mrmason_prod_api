@@ -28,29 +28,62 @@ public interface CustomerRetailerOrderHdrRepo extends JpaRepository<CustomerReta
 
 
  // home page customer material requests query
+    // @Query("""
+    //     SELECT DISTINCT h
+    //     FROM CustomerRetailerOrderHdrEntity h
+    //     JOIN h.customerRetailerOrderDetailsList d
+    //     WHERE d.materialCategory = :materialCategory
+    //       AND d.materialSubCategory = :materialSubCategory
+    //       AND d.brand = :brand
+    //       AND d.updatedDate >= :postedDateFrom
+    //       AND d.updatedDate < :postedDateTo
+    //       AND h.expectedDeliveryDate >= :deliveryDateFrom
+    //       AND h.expectedDeliveryDate < :deliveryDateTo
+    //       AND h.deliveryLocation = :deliveryLocation
+    //       AND h.orderStatus = :orderStatus
+    //     """)
+    // List<CustomerRetailerOrderHdrEntity> findMaterialRequestsByFilters(
+    //         @Param("materialCategory") String materialCategory,
+    //         @Param("materialSubCategory") String materialSubCategory,
+    //         @Param("brand") String brand,
+    //         @Param("postedDateFrom") Date postedDateFrom,
+    //         @Param("postedDateTo") Date postedDateTo,
+    //         @Param("deliveryDateFrom") LocalDate deliveryDateFrom,
+    //         @Param("deliveryDateTo") LocalDate deliveryDateTo,
+    //         @Param("deliveryLocation") String deliveryLocation,
+    //         @Param("orderStatus") OrderStatus orderStatus);
+
+
     @Query("""
-        SELECT DISTINCT h
-        FROM CustomerRetailerOrderHdrEntity h
-        JOIN h.customerRetailerOrderDetailsList d
-        WHERE d.materialCategory = :materialCategory
-          AND d.materialSubCategory = :materialSubCategory
-          AND d.brand = :brand
-          AND d.updatedDate >= :postedDateFrom
-          AND d.updatedDate < :postedDateTo
-          AND h.expectedDeliveryDate >= :deliveryDateFrom
-          AND h.expectedDeliveryDate < :deliveryDateTo
-          AND h.deliveryLocation = :deliveryLocation
-          AND h.orderStatus = :orderStatus
-        """)
-    List<CustomerRetailerOrderHdrEntity> findMaterialRequestsByFilters(
-            @Param("materialCategory") String materialCategory,
-            @Param("materialSubCategory") String materialSubCategory,
-            @Param("brand") String brand,
-            @Param("postedDateFrom") Date postedDateFrom,
-            @Param("postedDateTo") Date postedDateTo,
-            @Param("deliveryDateFrom") LocalDate deliveryDateFrom,
-            @Param("deliveryDateTo") LocalDate deliveryDateTo,
-            @Param("deliveryLocation") String deliveryLocation,
-            @Param("orderStatus") OrderStatus orderStatus);
+    SELECT DISTINCT h
+    FROM CustomerRetailerOrderHdrEntity h
+    JOIN h.customerRetailerOrderDetailsList d
+    WHERE (d.materialCategory = :materialCategory)
+      AND ( d.materialSubCategory = :materialSubCategory)
+      AND ( d.brand = :brand)
+      AND (:postedDateFrom IS NULL OR d.updatedDate >= :postedDateFrom)
+      AND (:postedDateTo IS NULL OR d.updatedDate < :postedDateTo)
+      AND (:deliveryDateFrom IS NULL OR h.expectedDeliveryDate >= :deliveryDateFrom)
+      AND (:deliveryDateTo IS NULL OR h.expectedDeliveryDate < :deliveryDateTo)
+      AND (:deliveryLocation IS NULL OR h.deliveryLocation = :deliveryLocation)
+      AND (:orderStatus IS NULL OR h.orderStatus = :orderStatus)
+    """)
+List<CustomerRetailerOrderHdrEntity> findMaterialRequestsByFilters(
+        @Param("materialCategory") String materialCategory,
+        @Param("materialSubCategory") String materialSubCategory,
+        @Param("brand") String brand,
+        @Param("postedDateFrom") Date postedDateFrom,
+        @Param("postedDateTo") Date postedDateTo,
+        @Param("deliveryDateFrom") LocalDate deliveryDateFrom,
+        @Param("deliveryDateTo") LocalDate deliveryDateTo,
+        @Param("deliveryLocation") String deliveryLocation,
+        @Param("orderStatus") OrderStatus orderStatus);
+
+
+
+
+
+
+
 
 }
