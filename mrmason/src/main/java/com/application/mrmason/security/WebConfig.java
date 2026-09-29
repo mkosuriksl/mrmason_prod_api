@@ -104,7 +104,8 @@ public class WebConfig {
 								"/admin-material-master/get-product",
 								"/admin-material-master/get-category",
 								"api/super-admin/**",
-								"/api/home/material-requests-by-customer/search"
+								"/api/home/material-requests-by-customer/search",
+						"/get-store-location"
 							).permitAll()
 						.requestMatchers("/api/quotation/get_all_quotation_info").hasAnyRole("MS", "Adm")
 						.requestMatchers("/api/admin-roles/create-role").hasAnyRole("SADM", "Adm")

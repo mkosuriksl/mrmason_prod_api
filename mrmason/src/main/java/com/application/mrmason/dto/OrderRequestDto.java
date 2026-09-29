@@ -10,8 +10,8 @@ public class OrderRequestDto {
     private String customerId;
     private String location;
     private String deliveryMethod;
-    private String userIdstoreId;
-    private LocalDate expectedDeliveryDate;
+    private String userIdstoreId; // MS_order id
+    private String expectedDeliveryDate;
     private String pincode;
     private List<OrderDetailsDto> orderDetailsList;
 

@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "customer_to_retailer_order_hdr")
+@Table(name = "customer_to_retailer_order_hdr") // Customer Place order header table
 public class CustomerRetailerOrderHdrEntity {
 
     @Id

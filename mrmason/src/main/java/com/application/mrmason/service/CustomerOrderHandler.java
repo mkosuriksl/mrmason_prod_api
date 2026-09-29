@@ -73,9 +73,8 @@ public class CustomerOrderHandler {
 		// 3️⃣ Fetch all cart details for this cart
 		List<CustomerOrderDetailsEntity> cartDetails =
 				customerCartDetailsRepo.findByOrderId(cartHeader.getOrderId());
-
-/*		String userId = cartDetails.get(0).getMsUserId();
-		if (userId == null || userId.trim().isEmpty()) {
+		String userId = cartDetails.get(0).getMsUserId();
+		/*if (userId == null || userId.trim().isEmpty()) {
 			throw new IllegalStateException("Cannot place order: Retailer/User ID is missing from cart details.");
 		}*/
 
@@ -93,21 +92,21 @@ public class CustomerOrderHandler {
 	    CustomerRetailerOrderHdrEntity orderHdr = new CustomerRetailerOrderHdrEntity();
 	    orderHdr.setCustomerCartOrderId(cartHeader.getOrderId());
 	    orderHdr.setCustomerId(dto.getCustomerId());
-	    String userId=cartHeader.getCustomerOrderDetailsEntities().get(0).getMsUserId();
-	    orderHdr.setRetailerId(userId); // ✅ ensure this is set BEFORE generating orderId
+	    String msUserId=cartHeader.getCustomerOrderDetailsEntities().get(0).getMsUserId();
+	    orderHdr.setRetailerId(msUserId); // ✅ ensure this is set BEFORE generating orderId
 	    orderHdr.setDeliveryMethod(dto.getDeliveryMethod());
 	    orderHdr.setOrderStatus(OrderStatus.NEW);
 	    orderHdr.setPaymentStatus(OrderStatus.PENDING);
 	    orderHdr.setOrderUpdatedBy("System");
-		orderHdr.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
-		orderHdr.setDeliveryLocation( dto.getLocation() );
-		orderHdr.setPincode( dto.getPincode());
+		orderHdr.setDeliveryLocation(dto.getLocation());
+		orderHdr.setExpectedDeliveryDate(LocalDate.parse(dto.getExpectedDeliveryDate()));
+		orderHdr.setPincode(dto.getPincode());
 	    orderHdr.setOrderDate(LocalDate.now());
 	    orderHdr.setOrderUpdatedDate(new Date());
 
 	    // 2a️⃣ Generate orderId with userIdstoreId included
 	    String sequenceNumber = String.format("%06d", new Random().nextInt(900000) + 100000);
-	    orderHdr.setOrderId("INVOICE" +LocalDate.now().getYear()+ sequenceNumber + "_" + userId );
+	    orderHdr.setOrderId("INVOICE" +LocalDate.now().getYear()+ sequenceNumber + "_" + msUserId );
 
 	    orderHdrRepo.save(orderHdr);
 		List<CustomerRetailerOrderDetailsEntity> retailerOrderDetailsList = new ArrayList<>();
@@ -135,6 +134,9 @@ public class CustomerOrderHandler {
 	        orderDetail.setTotalAmount(cartDetail.getTotal());
 	        orderDetail.setSkuIdUserId(cartDetail.getSkuIdUserId());
 	        orderDetail.setCustomerRetailerOrderHdr(orderHdr);
+			orderDetail.setDeliveryExpectedDate(dto.getExpectedDeliveryDate());
+			orderDetail.setLocation(dto.getLocation());
+			orderDetail.setPincode(dto.getPincode());
 	        orderDetailsRepo.save(orderDetail);
 			retailerOrderDetailsList.add(orderDetail);
 	        
