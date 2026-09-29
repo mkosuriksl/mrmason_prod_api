@@ -891,6 +891,7 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                         "shape",
                         "userId",
                         "page",
+                        "size",
                         "sort");
 
         if (requestParams != null) {
@@ -1019,6 +1020,7 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                                 StringUtils::hasText)
                         .map(
                                 String::trim)
+                        .distinct()
                         .collect(
                                 Collectors.toList());
 
@@ -1128,6 +1130,10 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                     dto);
 
             dto.setSkuId(sku);
+
+            // ====================================================
+            // IMAGES
+            // ====================================================
 
             UploadMatericalMasterImages image =
                     imageMap.get(sku);
@@ -1427,10 +1433,6 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                         "Failed to upload image 1 to S3.");
             }
 
-            System.out.println(
-                    "IMAGE 1 STORED KEY = "
-                            + imagePath);
-
             uploadEntity.setMaterialMasterImage1(
                     imagePath);
 
@@ -1464,10 +1466,6 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                 throw new IllegalStateException(
                         "Failed to upload image 2 to S3.");
             }
-
-            System.out.println(
-                    "IMAGE 2 STORED KEY = "
-                            + imagePath);
 
             uploadEntity.setMaterialMasterImage2(
                     imagePath);
@@ -1503,10 +1501,6 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                         "Failed to upload image 3 to S3.");
             }
 
-            System.out.println(
-                    "IMAGE 3 STORED KEY = "
-                            + imagePath);
-
             uploadEntity.setMaterialMasterImage3(
                     imagePath);
 
@@ -1541,10 +1535,6 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                         "Failed to upload image 4 to S3.");
             }
 
-            System.out.println(
-                    "IMAGE 4 STORED KEY = "
-                            + imagePath);
-
             uploadEntity.setMaterialMasterImage4(
                     imagePath);
 
@@ -1578,10 +1568,6 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                 throw new IllegalStateException(
                         "Failed to upload image 5 to S3.");
             }
-
-            System.out.println(
-                    "IMAGE 5 STORED KEY = "
-                            + imagePath);
 
             uploadEntity.setMaterialMasterImage5(
                     imagePath);
@@ -1705,15 +1691,6 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
 
     // ============================================================
     // EXTRACT S3 OBJECT KEY
-    //
-    // IMPORTANT:
-    // Does NOT use URI.create() for normal Amazon S3 URLs.
-    //
-    // This safely handles:
-    //
-    // TATA TISCON
-    //
-    // because spaces are allowed in an S3 object key.
     // ============================================================
 
     private String extractS3ObjectKey(
@@ -1725,15 +1702,6 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
 
         String trimmed =
                 value.trim();
-
-        // ========================================================
-        // CASE 1:
-        // Already an S3 object key
-        //
-        // Example:
-        //
-        // adminMaterialMaster/ABC/image.jpg
-        // ========================================================
 
         String marker =
                 ".amazonaws.com/";
@@ -1754,26 +1722,10 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                     : null;
         }
 
-        // ========================================================
-        // CASE 2:
-        // Other HTTP / HTTPS URL
-        // ========================================================
-
         if (trimmed.startsWith("http://")
                 || trimmed.startsWith("https://")) {
 
             try {
-
-                /*
-                 * Encode spaces before creating URI.
-                 * Example:
-                 *
-                 * TATA TISCON
-                 *
-                 * becomes:
-                 *
-                 * TATA%20TISCON
-                 */
 
                 String encoded =
                         trimmed.replace(
@@ -1794,11 +1746,6 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                                 path.substring(1);
                     }
 
-                    /*
-                     * Convert encoded spaces back to actual
-                     * S3 key spaces.
-                     */
-
                     return path.replace(
                             "%20",
                             " ");
@@ -1814,18 +1761,11 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
             }
         }
 
-        // ========================================================
-        // CASE 3:
-        // Already an S3 object key
-        // ========================================================
-
         return trimmed;
     }
 
     // ============================================================
     // GENERATE FRESH PRE-SIGNED IMAGE URL
-    //
-    // PUBLIC GET APIs
     // ============================================================
 
     private String getPresignedImageUrl(
@@ -1842,26 +1782,6 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
         if (!StringUtils.hasText(objectKey)) {
             return null;
         }
-
-        System.out.println(
-                "IMAGE VALUE = "
-                        + imagePath);
-
-        System.out.println(
-                "S3 OBJECT KEY = "
-                        + objectKey);
-
-        /*
-         * IMPORTANT:
-         *
-         * AWSConfig.getUrl() receives ONLY:
-         *
-         * adminMaterialMaster/...
-         *
-         * NOT:
-         *
-         * https://bucket.s3.ap-south-1.amazonaws.com/...
-         */
 
         return awsConfig.getUrl(
                 objectKey);
@@ -2052,13 +1972,22 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                         materialSubCategory,
                         brand);
 
+        // ========================================================
+        // NO MATERIALS
+        // ========================================================
+
         if (materials == null
                 || materials.isEmpty()) {
 
             return new AdminMaterialMasterResponseDTO(
                     Collections.emptyList(),
+                    Collections.emptyList(),
                     Collections.emptyList());
         }
+
+        // ========================================================
+        // GET SKU IDS
+        // ========================================================
 
         List<String> skuIds =
                 materials.stream()
@@ -2080,8 +2009,13 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
 
             return new AdminMaterialMasterResponseDTO(
                     Collections.emptyList(),
+                    Collections.emptyList(),
                     Collections.emptyList());
         }
+
+        // ========================================================
+        // GET ADMIN MATERIALS
+        // ========================================================
 
         List<AdminMaterialMaster> adminMaterials =
                 adminMaterialMasterRepository
@@ -2091,6 +2025,7 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                 || adminMaterials.isEmpty()) {
 
             return new AdminMaterialMasterResponseDTO(
+                    Collections.emptyList(),
                     Collections.emptyList(),
                     Collections.emptyList());
         }
@@ -2111,6 +2046,10 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                                         (first, second) ->
                                                 second,
                                         LinkedHashMap::new));
+
+        // ========================================================
+        // GET IMAGES
+        // ========================================================
 
         List<UploadMatericalMasterImages> images =
                 uploadMatericalMasterImagesRepository
@@ -2133,6 +2072,10 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                                                 second,
                                         LinkedHashMap::new));
 
+        // ========================================================
+        // RESPONSE LISTS
+        // ========================================================
+
         List<AdminMaterialMasterResponseWithImageDto>
                 materialDtos =
                 new ArrayList<>();
@@ -2140,8 +2083,28 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
         List<AdminDetailsDto> adminDtos =
                 new ArrayList<>();
 
+        /*
+         * Supplier list is intentionally empty here.
+         *
+         * Reason:
+         *
+         * AdminMaterialMaster.updatedBy contains ADMIN ID.
+         *
+         * It must NOT be treated as supplier bodSeqNo.
+         *
+         * A real supplier ID/bodSeqNo relationship is required
+         * before suppliers can be populated correctly.
+         */
+        List<com.application.mrmason.dto.MaterialSupplierDto>
+                supplierDtos =
+                new ArrayList<>();
+
         Set<String> seenAdminIds =
                 new HashSet<>();
+
+        // ========================================================
+        // BUILD RESPONSE
+        // ========================================================
 
         for (MaterialMaster material :
                 materials) {
@@ -2167,6 +2130,10 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                 continue;
             }
 
+            // ====================================================
+            // ONLY ACTIVE ADMIN MATERIALS
+            // ====================================================
+
             if (StringUtils.hasText(
                     adminMaterial.getStatus())
                     && !"Active".equalsIgnoreCase(
@@ -2174,6 +2141,10 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
 
                 continue;
             }
+
+            // ====================================================
+            // MATERIAL DTO
+            // ====================================================
 
             AdminMaterialMasterResponseWithImageDto dto =
                     new AdminMaterialMasterResponseWithImageDto();
@@ -2241,9 +2212,14 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
             }
         }
 
+        // ========================================================
+        // FINAL RESPONSE
+        // ========================================================
+
         return new AdminMaterialMasterResponseDTO(
                 materialDtos,
-                adminDtos);
+                adminDtos,
+                supplierDtos);
     }
 
     // ============================================================
