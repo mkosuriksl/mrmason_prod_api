@@ -4,10 +4,9 @@ import com.application.mrmason.entity.PaintMaster;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+
 @Repository
-public interface PaintMasterRepo extends JpaRepository<PaintMaster, Integer> {
+public interface PaintMasterRepo extends JpaRepository<PaintMaster,String> {
 
    // List<PaintMaster> findByIdAndBrand(int colorCode, String brand);
 

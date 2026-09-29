@@ -12,37 +12,6 @@ import com.application.mrmason.entity.ElectricalMaster;
 public interface ElectricalMasterRepository
         extends JpaRepository<ElectricalMaster, String> {
 
-    // ============================================================
-    // FIND BY PRIMARY KEY
-    // ============================================================
-
-    Optional<ElectricalMaster> findByUserIdStoreIdSku(
-            String userIdStoreIdSku);
-
-
-    // ============================================================
-    // DUPLICATE CHECK
-    // ============================================================
-
-    boolean existsByUserIdStoreIdSku(
-            String userIdStoreIdSku);
-
-
-    // ============================================================
-    // FIND BY MS USER
-    // ============================================================
-
-    List<ElectricalMaster> findByUpdatedBy(
-            String updatedBy);
-
-
-    // ============================================================
-    // FIND BY STORE
-    // ============================================================
-
-    List<ElectricalMaster> findByStore_StoreId(
-            String storeId);
-
-
+   
 
 }
