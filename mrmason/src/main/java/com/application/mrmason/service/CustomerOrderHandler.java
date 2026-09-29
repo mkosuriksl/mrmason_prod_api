@@ -37,6 +37,7 @@ import com.application.mrmason.repository.CustomerRetailerOrderHdrRepo;
 import com.application.mrmason.repository.MaterialRequirementByRequestRepository;
 import com.application.mrmason.security.AuthDetailsProvider;
 import com.application.mrmason.dto.MaterialRequestsFilterDto;
+import com.application.mrmason.dto.MaterialRequestbyCustomerResponseHomePageDto;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -321,7 +322,7 @@ public class CustomerOrderHandler {
 
 
 //home page customer material requests query
-public List<CustomerRetailerOrderHdrEntity> findMaterialRequestsByFilters(MaterialRequestsFilterDto filterDto) {
+public List<MaterialRequestbyCustomerResponseHomePageDto> findMaterialRequestsByFilters(MaterialRequestsFilterDto filterDto) {
        
 	
 	
