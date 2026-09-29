@@ -1,111 +1,55 @@
 package com.application.mrmason.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
-import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.Transient;
+import lombok.Data;
 
 @Entity
 @Table(name = "plumbing_master")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Data
 public class PlumbingMaster {
 
-    // ============================================================
-    // PRIMARY KEY
-    // ============================================================
-
     @Id
-    @Column(
-        name = "user_id_store_id_sku",
-        nullable = false,
-        unique = true
-    )
-    private String userIdStoreIdSku;
+    @Column(name = "userId_mtCat_mtSub_brand_skuId")
+    private String msCatmsSubCatmsBrandSkuId;
 
-    // ============================================================
-    // PRODUCT CATEGORY
-    // ============================================================
-
-    @Column(
-        name = "product_category",
-        nullable = false
-    )
-    private String productCategory;
-
-    // ============================================================
-    // PRODUCT SUB CATEGORY DETAILS
-    // ============================================================
-
-    @Column(
-        name = "sku",
-        nullable = false
-    )
+    private String serviceCategory;
+    private String materialCategory;
+    private String materialSubCategory;
+    private String brand;
+    private String modelNo;
     private String sku;
-
-    @Column(
-        name = "product_name",
-        nullable = false
-    )
-    private String productName;
-
-    @Column(
-        name = "product_description"
-    )
-    private String productDescription;
-
-    @Column(
-        name = "dimensions"
-    )
-    private String dimensions;
-
-    // ============================================================
-    // STORE
-    // ============================================================
-
-    /*
-     * plumbing_master.store_id
-     *          |
-     *          v
-     * store_master.storeid
-     */
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-        name = "store_id",
-        referencedColumnName = "storeid",
-        nullable = false
-    )
-    private StoreMaster store;
-
-    // ============================================================
-    // AUDIT
-    // ============================================================
-
-    @Column(
-        name = "updated_by",
-        nullable = false
-    )
+    private String modelName;
+    private String description;
+    private String image;
+    private BigDecimal size;
     private String updatedBy;
-
-   
-    @Column(
-        name = "updated_date"
-    )
     private LocalDateTime updatedDate;
+    private String userId;
+    private String shape;
+    private BigDecimal width;
+    private BigDecimal length;
+    private BigDecimal thickness;
+    private String status;
+
+    @Transient
+    private String materialMasterImage1;
+
+    @Transient
+    private String materialMasterImage2;
+
+    @Transient
+    private String materialMasterImage3;
+
+    @Transient
+    private String materialMasterImage4;
+
+    @Transient
+    private String materialMasterImage5;
 }

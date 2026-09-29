@@ -11,9 +11,9 @@ import jakarta.persistence.Transient;
 import lombok.Data;
 
 @Entity
-@Table(name = "electrical_master")
+@Table(name = "steel_master")
 @Data
-public class ElectricalMaster {
+public class SteelMaster {
 
     @Id
     @Column(name = "userId_mtCat_mtSub_brand_skuId")

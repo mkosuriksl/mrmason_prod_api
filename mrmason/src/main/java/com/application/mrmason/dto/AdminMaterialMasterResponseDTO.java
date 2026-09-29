@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 public class AdminMaterialMasterResponseDTO {
     private List<AdminMaterialMasterResponseWithImageDto> materials;
     private List<AdminDetailsDto> admins;
-    private List<MaterialSupplierDto> suppliers;
+    
 }
 
 

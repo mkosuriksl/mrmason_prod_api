@@ -17,32 +17,54 @@ import com.application.mrmason.entity.AdminMaterialMaster;
 import com.application.mrmason.enums.RegSource;
 
 public interface AdminMaterialMasterBasedOnCategoryService {
-List<MaterialGroupDTO> createAdminMaterialMaster(
+
+    List<MaterialGroupDTO> createAdminMaterialMaster(
             List<MaterialGroupDTO> requestGroups,
             String materialCategory,
             String materialSubCategory,
-            RegSource regSource,
-            String storeId)
+            RegSource regSource)
             throws AccessDeniedException;
 
-	List<AdminMaterialMaster> updateAdminMaterialMasters(List<AdminMaterialMaster> updatedList, RegSource regSource)
-			throws AccessDeniedException;
+    List<AdminMaterialMaster> updateAdminMaterialMasters(
+            List<AdminMaterialMaster> updatedList,
+            RegSource regSource)
+            throws AccessDeniedException;
 
-	public Page<AdminMaterialMasterResponseWithImageDto> getAdminMaterialMaster(
-	        String materialCategory, String materialSubCategory,
-	        String brand, String modelNo, String size, String shape,
-	        String userId, Pageable pageable, Map<String, String> requestParams) throws AccessDeniedException;
+    Page<AdminMaterialMasterResponseWithImageDto> getAdminMaterialMaster(
+            String materialCategory,
+            String materialSubCategory,
+            String brand,
+            String modelNo,
+            String size,
+            String shape,
+            String userId,
+            Pageable pageable,
+            Map<String, String> requestParams)
+            throws AccessDeniedException;
 
-	public ResponseEntity<ResponseModel> uploadDoc(RegSource regSource, String skuId,
-			MultipartFile materialMasterImage1, MultipartFile materialMasterImage2, MultipartFile materialMasterImage3,
-			MultipartFile materialMasterImage4, MultipartFile materialMasterImage5) throws AccessDeniedException;
+    ResponseEntity<ResponseModel> uploadDoc(
+            RegSource regSource,
+            String skuId,
+            MultipartFile materialMasterImage1,
+            MultipartFile materialMasterImage2,
+            MultipartFile materialMasterImage3,
+            MultipartFile materialMasterImage4,
+            MultipartFile materialMasterImage5)
+            throws AccessDeniedException;
 
-	public List<String> findDistinctBrandByMaterialCategory(String materialCategory,String materialSubCategory, Map<String, String> requestParams);
+    List<String> findDistinctBrandByMaterialCategory(
+            String materialCategory,
+            String materialSubCategory,
+            Map<String, String> requestParams)
+            throws AccessDeniedException;
 
-//	public List<String> findDistinctMaterialCategory();
-	
-	public List<Map<String, Object>> findDistinctMaterialCategoryWithSubCategory();
+    List<Map<String, Object>> findDistinctMaterialCategoryWithSubCategory()
+            throws AccessDeniedException;
 
-	public AdminMaterialMasterResponseDTO getMaterialsWithUserInfo(String materialCategory, String materialSubCategory,
-			String brand, String location);
-    }
+    AdminMaterialMasterResponseDTO getMaterialsWithUserInfo(
+            String materialCategory,
+            String materialSubCategory,
+            String brand,
+            String location)
+            throws AccessDeniedException;
+}
