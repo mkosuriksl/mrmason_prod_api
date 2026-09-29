@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 import com.application.mrmason.entity.CustomerRetailerOrderHdrEntity;
 import com.application.mrmason.enums.OrderStatus;
+import com.application.mrmason.dto.MaterialRequestbyCustomerResponseHomePageDto;
 
 public interface CustomerRetailerOrderHdrRepo extends JpaRepository<CustomerRetailerOrderHdrEntity, String> {
 
@@ -55,12 +56,18 @@ public interface CustomerRetailerOrderHdrRepo extends JpaRepository<CustomerReta
 
 
     @Query("""
-    SELECT DISTINCT h
+    SELECT DISTINCT new com.application.mrmason.dto.MaterialRequestbyCustomerResponseHomePageDto(
+        h.orderId,
+        h.customerId,
+        h.expectedDeliveryDate,
+        h.deliveryLocation,
+        h.orderStatus
+    )
     FROM CustomerRetailerOrderHdrEntity h
     JOIN h.customerRetailerOrderDetailsList d
     WHERE (d.materialCategory = :materialCategory)
       AND ( d.materialSubCategory = :materialSubCategory)
-      AND ( d.brand = :brand)
+      AND ( :brand IS NULL OR d.brand = :brand)
       AND (:postedDateFrom IS NULL OR d.updatedDate >= :postedDateFrom)
       AND (:postedDateTo IS NULL OR d.updatedDate < :postedDateTo)
       AND (:deliveryDateFrom IS NULL OR h.expectedDeliveryDate >= :deliveryDateFrom)
@@ -68,7 +75,7 @@ public interface CustomerRetailerOrderHdrRepo extends JpaRepository<CustomerReta
       AND (:deliveryLocation IS NULL OR h.deliveryLocation = :deliveryLocation)
       AND (:orderStatus IS NULL OR h.orderStatus = :orderStatus)
     """)
-List<CustomerRetailerOrderHdrEntity> findMaterialRequestsByFilters(
+List<MaterialRequestbyCustomerResponseHomePageDto> findMaterialRequestsByFilters(
         @Param("materialCategory") String materialCategory,
         @Param("materialSubCategory") String materialSubCategory,
         @Param("brand") String brand,

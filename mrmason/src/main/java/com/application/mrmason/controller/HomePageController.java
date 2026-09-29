@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.application.mrmason.dto.MaterialRequestsFilterDto;
 import com.application.mrmason.entity.CustomerRetailerOrderHdrEntity;
 import com.application.mrmason.service.CustomerOrderHandler;
+import com.application.mrmason.dto.MaterialRequestbyCustomerResponseHomePageDto;
 
 @RestController
 @RequestMapping("/api/home")
@@ -26,10 +27,10 @@ public class HomePageController {
     private CustomerOrderHandler customerOrderHandler;
 
     @PostMapping("/material-requests-by-customer/search")
-    public ResponseEntity<List<CustomerRetailerOrderHdrEntity>> findMaterialRequestsByFilters(
+    public ResponseEntity<List<MaterialRequestbyCustomerResponseHomePageDto>> findMaterialRequestsByFilters(
             @RequestBody MaterialRequestsFilterDto filterDto) {
 
-        List<CustomerRetailerOrderHdrEntity> result =
+        List<MaterialRequestbyCustomerResponseHomePageDto> result =
                 customerOrderHandler.findMaterialRequestsByFilters(filterDto);
 
         return ResponseEntity.ok(result);
