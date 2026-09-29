@@ -2,6 +2,7 @@ package com.application.mrmason.dto;
 
 import com.application.mrmason.entity.UserType;
 import com.application.mrmason.enums.RegSource;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
@@ -97,6 +98,7 @@ public class CxQuotationResponseDto {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    @JsonIgnoreProperties
     public static class CustomerDetails {
         private String name;
         private String email;

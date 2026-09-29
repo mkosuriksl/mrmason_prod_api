@@ -36,6 +36,7 @@ import com.application.mrmason.repository.CustomerRetailerOrderDetailsRepo;
 import com.application.mrmason.repository.CustomerRetailerOrderHdrRepo;
 import com.application.mrmason.repository.MaterialRequirementByRequestRepository;
 import com.application.mrmason.security.AuthDetailsProvider;
+import com.application.mrmason.dto.MaterialRequestsFilterDto;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -68,7 +69,26 @@ public class CustomerOrderHandler {
 	    CustomerOrderHdrEntity cartHeader = customerCartHdrRepo.findById(dto.getCustomerCartOrderId())
 	            .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
 
-	    // 2️⃣ Create order header
+		// 3️⃣ Fetch all cart details for this cart
+		List<CustomerOrderDetailsEntity> cartDetails =
+				customerCartDetailsRepo.findByOrderId(cartHeader.getOrderId());
+
+/*		String userId = cartDetails.get(0).getMsUserId();
+		if (userId == null || userId.trim().isEmpty()) {
+			throw new IllegalStateException("Cannot place order: Retailer/User ID is missing from cart details.");
+		}*/
+
+		// 4️⃣ Safely handle orderDetailsList from DTO
+		List<OrderDetailsDto> orderDetailsList =
+				Optional.ofNullable(dto.getOrderDetailsList()).orElse(Collections.emptyList());
+
+		// ✅ Only validate if frontend sent the list
+		if (!orderDetailsList.isEmpty() && orderDetailsList.size() != cartDetails.size()) {
+			throw new RuntimeException("Mismatch between cart items and order request items");
+		}
+
+
+		// 2️⃣ Create order header
 	    CustomerRetailerOrderHdrEntity orderHdr = new CustomerRetailerOrderHdrEntity();
 	    orderHdr.setCustomerCartOrderId(cartHeader.getOrderId());
 	    orderHdr.setCustomerId(dto.getCustomerId());
@@ -78,6 +98,9 @@ public class CustomerOrderHandler {
 	    orderHdr.setOrderStatus(OrderStatus.NEW);
 	    orderHdr.setPaymentStatus(OrderStatus.PENDING);
 	    orderHdr.setOrderUpdatedBy("System");
+		orderHdr.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
+		orderHdr.setDeliveryLocation( dto.getLocation() );
+		orderHdr.setPincode( dto.getPincode());
 	    orderHdr.setOrderDate(LocalDate.now());
 	    orderHdr.setOrderUpdatedDate(new Date());
 
@@ -86,20 +109,8 @@ public class CustomerOrderHandler {
 	    orderHdr.setOrderId("INVOICE" +LocalDate.now().getYear()+ sequenceNumber + "_" + userId );
 
 	    orderHdrRepo.save(orderHdr);
-
-	    // 3️⃣ Fetch all cart details for this cart
-	    List<CustomerOrderDetailsEntity> cartDetails =
-	            customerCartDetailsRepo.findByOrderId(cartHeader.getOrderId());
-
-	    // 4️⃣ Safely handle orderDetailsList from DTO
-	    List<OrderDetailsDto> orderDetailsList =
-	            Optional.ofNullable(dto.getOrderDetailsList()).orElse(Collections.emptyList());
-
-	    // ✅ Only validate if frontend sent the list
-	    if (!orderDetailsList.isEmpty() && orderDetailsList.size() != cartDetails.size()) {
-	        throw new RuntimeException("Mismatch between cart items and order request items");
-	    }
-
+		List<CustomerRetailerOrderDetailsEntity> retailerOrderDetailsList = new ArrayList<>();
+		List<MaterialRequirementByRequest> materialReqList = new ArrayList<>();
 	    // 5️⃣ Map cart details to retailer order details
 	    int counter = 1;
 	    for (CustomerOrderDetailsEntity cartDetail : cartDetails) {
@@ -113,6 +124,9 @@ public class CustomerOrderHandler {
 	        // copy fields from cart
 	        orderDetail.setCustomerCartOrderLineId(cartDetail.getOrderlineId());
 	        orderDetail.setBrand(cartDetail.getBrand());
+			orderDetail.setModelName(cartDetail.getModelName());
+			orderDetail.setMaterialCategory(cartDetail.getMaterialCategory());
+			orderDetail.setMaterialSubCategory(cartDetail.getMaterialSubCategory());
 	        orderDetail.setOrderQty(cartDetail.getOrderQty());
 	        orderDetail.setMrp(cartDetail.getMrp());
 	        orderDetail.setDiscount(cartDetail.getDiscount());
@@ -121,6 +135,7 @@ public class CustomerOrderHandler {
 	        orderDetail.setSkuIdUserId(cartDetail.getSkuIdUserId());
 	        orderDetail.setCustomerRetailerOrderHdr(orderHdr);
 	        orderDetailsRepo.save(orderDetail);
+			retailerOrderDetailsList.add(orderDetail);
 	        
 	        MaterialRequirementByRequest materialReq = new MaterialRequirementByRequest();
 	        materialReq.setReqIdLineId(orderDetail.getLineItemId()); // orderlineId -> reqIdLineId
@@ -142,19 +157,28 @@ public class CustomerOrderHandler {
 	        materialReq.setUpdatedDate(new Date());
 	        materialReq.setStatus(OrderStatus.NEW.name());
 	        materialRequirementByRequestRepository.save(materialReq);
+
+			materialReqList.add(materialReq);
 	        
 	        cartDetail.setStatus(OrderStatus.COMPLETED);
 	        cartDetail.setUpdatedDate(new Date());
 	        cartDetail.setUpdatedBy("System");
+
 	    }
+
+		List<CustomerRetailerOrderDetailsEntity> savedOrderDetails = orderDetailsRepo.saveAll(retailerOrderDetailsList);
+		materialRequirementByRequestRepository.saveAll(materialReqList);
 
 	    // 6️⃣ Update cart header
 	    cartHeader.setStatus(OrderStatus.COMPLETED);
 	    cartHeader.setOrderUpdatedDate(new Date());
 	    cartHeader.setOrderUpdatedBy("System");
 
+
 	    customerCartHdrRepo.save(cartHeader);
 	    customerCartDetailsRepo.saveAll(cartDetails);
+
+		orderHdr.setCustomerRetailerOrderDetailsList(savedOrderDetails);
 
 	    return orderHdr;
 	}
@@ -292,4 +316,39 @@ public class CustomerOrderHandler {
             "data", responseData
         );
     }
+
+
+//home page customer material requests query
+public List<CustomerRetailerOrderHdrEntity> findMaterialRequestsByFilters(MaterialRequestsFilterDto filterDto) {
+       
+	
+	
+	
+
+    return orderHdrRepo.findMaterialRequestsByFilters(
+            filterDto.getMaterialCategory(),
+            filterDto.getMaterialSubCategory(),
+            filterDto.getBrand(),
+            filterDto.getPostedDateFrom(),
+            filterDto.getPostedDateTo(),
+            filterDto.getDeliveryDateFrom(),
+            filterDto.getDeliveryDateTo(),
+            filterDto.getDeliveryLocation(),
+            filterDto.getOrderStatus()
+    );
+
 }
+
+
+}
+
+
+
+
+
+
+
+
+
+
+

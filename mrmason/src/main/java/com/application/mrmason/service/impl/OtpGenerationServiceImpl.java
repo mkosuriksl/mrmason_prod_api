@@ -68,7 +68,7 @@ public class OtpGenerationServiceImpl implements OtpGenerationService {
 	        user.setEOtp(otp);
 	        userDAO.save(user);
 	    }
-		mailService.sendEmail(mail, otp,regSource);
+		mailService.sendEmail(mail, "YOUR OTP FOR VERIFICATION.", otp, regSource);
 		return otp;
 	}
 	
@@ -83,7 +83,7 @@ public class OtpGenerationServiceImpl implements OtpGenerationService {
 	        user.setOtp(otp);
 	        emailLoginRepo.save(user);
 	    }
-		mailService.sendEmail(mail, otp,regSource);
+		mailService.sendEmail(mail, "YOUR OTP FOR VERIFICATION.", otp, regSource);
 		return otp;
 	}
 	
@@ -98,7 +98,7 @@ public class OtpGenerationServiceImpl implements OtpGenerationService {
 	        user.setEOtp(otp);
 	        msuserDAO.save(user);
 	    }
-		mailService.sendEmail(mail, otp,regSource);
+		mailService.sendEmail(mail, "YOUR OTP FOR VERIFICATION.", otp, regSource);
 		return otp;
 	}
 	

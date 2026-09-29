@@ -128,7 +128,7 @@ public class UserService {
 		// Email sending
 		String subject = "Verify Your Email and Mobile Number";
 		String emailMessage = "Thanks for registering with us. please verify your registered email and mobile.";
-		emailService.sendEmail(user.getEmail(), subject, emailMessage);
+		emailService.sendEmail(user.getEmail(), subject, emailMessage, user.getRegSource());
 		// Mobile sms sending
 		String message = "Thanks for registering with us. please verify your registered email and mobile before login. - mekanik.in";
 		smsService.registrationSendSMSMessage(user.getMobile(), message, user.getRegSource());
