@@ -2,6 +2,8 @@ package com.application.mrmason.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -101,12 +103,16 @@ public class CustomerOrderHandler {
 		orderHdr.setDeliveryLocation(dto.getLocation());
 		orderHdr.setExpectedDeliveryDate(LocalDate.parse(dto.getExpectedDeliveryDate()));
 		orderHdr.setPincode(dto.getPincode());
+		orderHdr.setTotalMrp(dto.getTotalMrp());
 	    orderHdr.setOrderDate(LocalDate.now());
 	    orderHdr.setOrderUpdatedDate(new Date());
 
 	    // 2a️⃣ Generate orderId with userIdstoreId included
-	    String sequenceNumber = String.format("%06d", new Random().nextInt(900000) + 100000);
-	    orderHdr.setOrderId("INVOICE" +LocalDate.now().getYear()+ sequenceNumber + "_" + msUserId );
+	    String DateFormat = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHH"));
+		orderHdr.setOrderId("MR"+DateFormat);
+
+/*		String sequenceNumber = String.format("%06d", new Random().nextInt(900000) + 100000);
+	    orderHdr.setOrderId("INVOICE" +LocalDate.now().getYear()+ sequenceNumber + "_" + msUserId );*/
 
 	    orderHdrRepo.save(orderHdr);
 		List<CustomerRetailerOrderDetailsEntity> retailerOrderDetailsList = new ArrayList<>();

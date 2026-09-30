@@ -42,6 +42,9 @@ public class CustomerRetailerOrderHdrEntity {
     @Enumerated(EnumType.STRING)
     private OrderStatus paymentStatus;
 
+    @Column(name="total_mrp")
+    private String totalMrp;
+
     @Column(name = "expected_delivery_date")
     private LocalDate expectedDeliveryDate;
 
