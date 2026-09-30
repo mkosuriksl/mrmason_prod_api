@@ -1,5 +1,6 @@
 package com.application.mrmason.service.impl;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
@@ -8,7 +9,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -18,8 +18,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,10 +29,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.application.mrmason.config.AWSConfig;
 import com.application.mrmason.dto.AdminDetailsDto;
-import com.application.mrmason.dto.AdminMaterialMasterResponseDTO;
-import com.application.mrmason.dto.AdminMaterialMasterResponseWithImageDto;
 import com.application.mrmason.dto.MaterialDTO;
+import com.application.mrmason.dto.MaterialGetDTO;
 import com.application.mrmason.dto.MaterialGroupDTO;
+import com.application.mrmason.dto.MaterialGroupGetDTO;
+import com.application.mrmason.dto.MaterialGroupPageResponseDTO;
 import com.application.mrmason.dto.ResponseModel;
 import com.application.mrmason.entity.AdminDetails;
 import com.application.mrmason.entity.AdminMaterialMaster;
@@ -159,239 +158,315 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
     // CREATE ADMIN MATERIAL MASTER
     // ============================================================
 
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public List<MaterialGroupDTO> createAdminMaterialMaster(
-            List<MaterialGroupDTO> requestGroups,
-            String materialCategory,
-            String materialSubCategory,
-            RegSource regSource)
-            throws AccessDeniedException {
+// ============================================================
+// CREATE ADMIN MATERIAL MASTER
+//
+// POST:
+// /admin-material-master/add?regSource=MRMASON
+//
+// materialCategory and materialSubCategory come from
+// MaterialGroupDTO request body.
+// ============================================================
 
-        UserInfo userInfo = getLoggedInUserInfo();
+@Override
+@Transactional(rollbackFor = Exception.class)
+public List<MaterialGroupDTO> createAdminMaterialMaster(
+        List<MaterialGroupDTO> requestGroups,
+        RegSource regSource)
+        throws AccessDeniedException {
 
-        if (requestGroups == null || requestGroups.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Material groups are required.");
+    UserInfo userInfo = getLoggedInUserInfo();
+
+    // ========================================================
+    // VALIDATE REQUEST
+    // ========================================================
+
+    if (requestGroups == null || requestGroups.isEmpty()) {
+        throw new IllegalArgumentException(
+                "Material groups are required.");
+    }
+
+    // ========================================================
+    // PROCESS EACH GROUP
+    // ========================================================
+
+    for (MaterialGroupDTO group : requestGroups) {
+
+        if (group == null) {
+            continue;
         }
 
-        if (!StringUtils.hasText(materialCategory)) {
+        // ====================================================
+        // CATEGORY FROM REQUEST BODY
+        // ====================================================
+
+        if (!StringUtils.hasText(
+                group.getMaterialCategory())) {
+
             throw new IllegalArgumentException(
                     "materialCategory is required.");
         }
 
-        if (!StringUtils.hasText(materialSubCategory)) {
+        // ====================================================
+        // SUB CATEGORY FROM REQUEST BODY
+        // ====================================================
+
+        if (!StringUtils.hasText(
+                group.getMaterialSubCategory())) {
+
             throw new IllegalArgumentException(
                     "materialSubCategory is required.");
         }
 
+        // ====================================================
+        // BRAND FROM REQUEST BODY
+        // ====================================================
+
+        if (!StringUtils.hasText(
+                group.getBrand())) {
+
+            throw new IllegalArgumentException(
+                    "brand is required.");
+        }
+
         String category =
-                materialCategory.trim().toUpperCase();
+                group.getMaterialCategory()
+                        .trim()
+                        .toUpperCase();
 
         String subCategory =
-                materialSubCategory.trim().toUpperCase();
+                group.getMaterialSubCategory()
+                        .trim()
+                        .toUpperCase();
 
-        for (MaterialGroupDTO group : requestGroups) {
+        String brand =
+                group.getBrand()
+                        .trim()
+                        .toUpperCase();
 
-            if (group == null) {
+        // Normalize request body values
+        group.setMaterialCategory(category);
+        group.setMaterialSubCategory(subCategory);
+        group.setBrand(brand);
+
+        // ====================================================
+        // MATERIALS VALIDATION
+        // ====================================================
+
+        if (group.getMaterials() == null
+                || group.getMaterials().isEmpty()) {
+
+            throw new IllegalArgumentException(
+                    "materials are required for brand: "
+                            + brand);
+        }
+
+        // ====================================================
+        // PROCESS MATERIALS
+        // ====================================================
+
+        for (MaterialDTO material : group.getMaterials()) {
+
+            if (material == null) {
                 continue;
             }
 
-            if (!StringUtils.hasText(group.getBrand())) {
-                throw new IllegalArgumentException(
-                        "brand is required.");
-            }
+            // =================================================
+            // SKU VALIDATION
+            // =================================================
 
-            String brand =
-                    group.getBrand()
-                            .trim()
-                            .toUpperCase();
-
-            group.setMaterialCategory(category);
-            group.setMaterialSubCategory(subCategory);
-            group.setBrand(brand);
-
-            if (group.getMaterials() == null
-                    || group.getMaterials().isEmpty()) {
+            if (!StringUtils.hasText(
+                    material.getSkuId())) {
 
                 throw new IllegalArgumentException(
-                        "materials are required for brand: "
+                        "SKU is required for brand: "
                                 + brand);
             }
 
-            for (MaterialDTO material : group.getMaterials()) {
+            String sku =
+                    material.getSkuId().trim();
 
-                if (material == null) {
-                    continue;
-                }
+            // =================================================
+            // FULL SKU
+            //
+            // ADMIN_ID_CATEGORY_SUBCATEGORY_BRAND_SKU
+            // =================================================
 
-                if (!StringUtils.hasText(material.getSkuId())) {
+            String fullSku =
+                    userInfo.userId
+                            + "_"
+                            + category
+                            + "_"
+                            + subCategory
+                            + "_"
+                            + brand
+                            + "_"
+                            + sku;
 
-                    throw new IllegalArgumentException(
-                            "SKU is required for brand: "
-                                    + brand);
-                }
+            System.out.println(
+                    "======================================");
 
-                String sku =
-                        material.getSkuId().trim();
+            System.out.println(
+                    "ADMIN MATERIAL CREATE / UPDATE");
 
-                String fullSku =
-                        userInfo.userId
-                                + "_"
-                                + category
-                                + "_"
-                                + subCategory
-                                + "_"
-                                + brand
-                                + "_"
-                                + sku;
+            System.out.println(
+                    "Admin ID = "
+                            + userInfo.userId);
 
-                System.out.println(
-                        "======================================");
+            System.out.println(
+                    "Category = "
+                            + category);
 
-                System.out.println(
-                        "ADMIN MATERIAL CREATE / UPDATE");
+            System.out.println(
+                    "Sub Category = "
+                            + subCategory);
 
-                System.out.println(
-                        "Admin ID = "
-                                + userInfo.userId);
+            System.out.println(
+                    "Brand = "
+                            + brand);
 
-                System.out.println(
-                        "Full SKU = "
-                                + fullSku);
+            System.out.println(
+                    "SKU = "
+                            + sku);
 
-                System.out.println(
-                        "======================================");
+            System.out.println(
+                    "Full SKU = "
+                            + fullSku);
 
-                // =================================================
-                // MATERIAL MASTER
-                // =================================================
+            System.out.println(
+                    "======================================");
 
-                MaterialMaster materialEntity =
-                        materialMasterRepository
-                                .findByMsCatmsSubCatmsBrandSkuId(
-                                        fullSku)
-                                .orElseGet(
-                                        MaterialMaster::new);
+            // =================================================
+            // MATERIAL MASTER
+            // =================================================
 
-                materialEntity.setMsCatmsSubCatmsBrandSkuId(
-                        fullSku);
+            MaterialMaster materialEntity =
+                    materialMasterRepository
+                            .findByMsCatmsSubCatmsBrandSkuId(
+                                    fullSku)
+                            .orElseGet(
+                                    MaterialMaster::new);
 
-                materialEntity.setMaterialCategory(
-                        category);
+            materialEntity.setMsCatmsSubCatmsBrandSkuId(
+                    fullSku);
 
-                materialEntity.setMaterialSubCategory(
-                        subCategory);
+            materialEntity.setMaterialCategory(
+                    category);
 
-                materialEntity.setBrand(
-                        brand);
+            materialEntity.setMaterialSubCategory(
+                    subCategory);
 
-                materialEntity.setSku(
-                        sku);
+            materialEntity.setBrand(
+                    brand);
 
-                materialEntity.setModelNo(
-                        material.getModelNo());
+            materialEntity.setSku(
+                    sku);
 
-                materialEntity.setModelName(
-                        material.getModelName());
+            materialEntity.setModelNo(
+                    material.getModelNo());
 
-                materialEntity.setShape(
-                        material.getShape());
+            materialEntity.setModelName(
+                    material.getModelName());
 
-                materialEntity.setWidth(
-                        material.getWidth());
+            materialEntity.setShape(
+                    material.getShape());
 
-                materialEntity.setLength(
-                        material.getLength());
+            materialEntity.setWidth(
+                    material.getWidth());
 
-                materialEntity.setSize(
-                        material.getSize());
+            materialEntity.setLength(
+                    material.getLength());
 
-                materialEntity.setThickness(
-                        material.getThickness());
+            materialEntity.setSize(
+                    material.getSize());
 
-                materialEntity.setStatus(
-                        "Active");
+            materialEntity.setThickness(
+                    material.getThickness());
 
-                materialEntity.setUserId(
-                        userInfo.userId);
+            materialEntity.setStatus(
+                    "Active");
 
-                materialEntity.setUpdatedBy(
-                        userInfo.userId);
+            materialEntity.setUserId(
+                    userInfo.userId);
 
-                materialEntity.setUpdatedDate(
-                        LocalDateTime.now());
+            materialEntity.setUpdatedBy(
+                    userInfo.userId);
 
-                MaterialMaster savedMaterial =
-                        materialMasterRepository.save(
-                                materialEntity);
+            materialEntity.setUpdatedDate(
+                    LocalDateTime.now());
 
-                // =================================================
-                // ADMIN MATERIAL MASTER
-                // =================================================
+            MaterialMaster savedMaterial =
+                    materialMasterRepository.save(
+                            materialEntity);
 
-                AdminMaterialMaster adminEntity =
-                        adminMaterialMasterRepository
-                                .findBySkuId(fullSku)
-                                .orElseGet(
-                                        AdminMaterialMaster::new);
+            // =================================================
+            // ADMIN MATERIAL MASTER
+            // =================================================
 
-                adminEntity.setSkuId(fullSku);
+            AdminMaterialMaster adminEntity =
+                    adminMaterialMasterRepository
+                            .findBySkuId(fullSku)
+                            .orElseGet(
+                                    AdminMaterialMaster::new);
 
-                adminEntity.setMaterialCategory(
-                        category);
+            adminEntity.setSkuId(fullSku);
 
-                adminEntity.setMaterialSubCategory(
-                        subCategory);
+            adminEntity.setMaterialCategory(
+                    category);
 
-                adminEntity.setBrand(
-                        brand);
+            adminEntity.setMaterialSubCategory(
+                    subCategory);
 
-                adminEntity.setModelNo(
-                        material.getModelNo());
+            adminEntity.setBrand(
+                    brand);
 
-                adminEntity.setModelName(
-                        material.getModelName());
+            adminEntity.setModelNo(
+                    material.getModelNo());
 
-                adminEntity.setShape(
-                        material.getShape());
+            adminEntity.setModelName(
+                    material.getModelName());
 
-                adminEntity.setWidth(
-                        material.getWidth());
+            adminEntity.setShape(
+                    material.getShape());
 
-                adminEntity.setLength(
-                        material.getLength());
+            adminEntity.setWidth(
+                    material.getWidth());
 
-                adminEntity.setSize(
-                        material.getSize());
+            adminEntity.setLength(
+                    material.getLength());
 
-                adminEntity.setThickness(
-                        material.getThickness());
+            adminEntity.setSize(
+                    material.getSize());
 
-                adminEntity.setStatus(
-                        "Active");
+            adminEntity.setThickness(
+                    material.getThickness());
 
-                adminEntity.setUpdatedBy(
-                        userInfo.userId);
+            adminEntity.setStatus(
+                    "Active");
 
-                adminEntity.setUpdatedDate(
-                        new Date());
+            adminEntity.setUpdatedBy(
+                    userInfo.userId);
 
-                adminMaterialMasterRepository.save(
-                        adminEntity);
+            adminEntity.setUpdatedDate(
+                    new Date());
 
-                // =================================================
-                // CATEGORY MASTER
-                // =================================================
+            adminMaterialMasterRepository.save(
+                    adminEntity);
 
-                saveCategoryMaster(
-                        savedMaterial,
-                        category);
-            }
+            // =================================================
+            // CATEGORY MASTER
+            // =================================================
+
+            saveCategoryMaster(
+                    savedMaterial,
+                    category);
         }
-
-        return requestGroups;
     }
+
+    return requestGroups;
+}
+
+
 
     // ============================================================
     // GET LOGGED-IN ADMIN
@@ -859,27 +934,32 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
     // GET ADMIN MATERIAL MASTER
     //
     // PUBLIC GET API
+    //
+    // RESPONSE IS NOW GROUPED
     // ============================================================
 
     @Override
-    public Page<AdminMaterialMasterResponseWithImageDto>
-            getAdminMaterialMaster(
-                    String materialCategory,
-                    String materialSubCategory,
-                    String brand,
-                    String modelNo,
-                    String size,
-                    String shape,
-                    String userId,
-                    Pageable pageable,
-                    Map<String, String> requestParams)
-                    throws AccessDeniedException {
+    public MaterialGroupPageResponseDTO getAdminMaterialMaster(
+            String materialCategory,
+            String materialSubCategory,
+            String brand,
+            String modelNo,
+            String size,
+            String shape,
+            String userId,
+            Pageable pageable,
+            Map<String, String> requestParams)
+            throws AccessDeniedException {
 
         if (pageable == null) {
 
             throw new IllegalArgumentException(
                     "Pageable is required.");
         }
+
+        // ========================================================
+        // VALID REQUEST PARAMETERS
+        // ========================================================
 
         List<String> expectedParams =
                 Arrays.asList(
@@ -888,10 +968,10 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                         "brand",
                         "modelNo",
                         "size",
+                        "brandsize",
                         "shape",
                         "userId",
                         "page",
-                        "size",
                         "sort");
 
         if (requestParams != null) {
@@ -999,20 +1079,42 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                         .createQuery(countQuery)
                         .getSingleResult();
 
-        if (materials.isEmpty()) {
+        // ========================================================
+        // EMPTY RESPONSE
+        // ========================================================
 
-            return new PageImpl<>(
-                    Collections.emptyList(),
-                    pageable,
-                    total);
+        if (materials == null
+                || materials.isEmpty()) {
+
+            return MaterialGroupPageResponseDTO
+                    .builder()
+                    .message(
+                            "Material Master details retrieved successfully.")
+                    .status(true)
+                    .materials(
+                            Collections.emptyList())
+                    .currentPage(
+                            pageable.getPageNumber())
+                    .pageSize(
+                            pageable.getPageSize())
+                    .totalElements(
+                            total)
+                    .totalPages(
+                            calculateTotalPages(
+                                    total,
+                                    pageable.getPageSize()))
+                    .build();
         }
 
         // ========================================================
-        // SKU IDS
+        // GET SKU IDS
         // ========================================================
 
         List<String> skuIds =
                 materials.stream()
+                        .filter(
+                                material ->
+                                        material != null)
                         .map(
                                 MaterialMaster::
                                         getMsCatmsSubCatmsBrandSkuId)
@@ -1026,10 +1128,24 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
 
         if (skuIds.isEmpty()) {
 
-            return new PageImpl<>(
-                    Collections.emptyList(),
-                    pageable,
-                    total);
+            return MaterialGroupPageResponseDTO
+                    .builder()
+                    .message(
+                            "Material Master details retrieved successfully.")
+                    .status(true)
+                    .materials(
+                            Collections.emptyList())
+                    .currentPage(
+                            pageable.getPageNumber())
+                    .pageSize(
+                            pageable.getPageSize())
+                    .totalElements(
+                            total)
+                    .totalPages(
+                            calculateTotalPages(
+                                    total,
+                                    pageable.getPageSize()))
+                    .build();
         }
 
         // ========================================================
@@ -1041,21 +1157,8 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                         .findAllById(skuIds);
 
         Map<String, AdminMaterialMaster> adminMap =
-                adminMaterials.stream()
-                        .filter(
-                                item ->
-                                        item != null
-                                                && StringUtils.hasText(
-                                                        item.getSkuId()))
-                        .collect(
-                                Collectors.toMap(
-                                        item ->
-                                                item.getSkuId()
-                                                        .trim(),
-                                        item -> item,
-                                        (first, second) ->
-                                                second,
-                                        LinkedHashMap::new));
+                buildAdminMaterialMap(
+                        adminMaterials);
 
         // ========================================================
         // IMAGES
@@ -1066,108 +1169,40 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                         .findAllById(skuIds);
 
         Map<String, UploadMatericalMasterImages> imageMap =
-                images.stream()
-                        .filter(
-                                image ->
-                                        image != null
-                                                && StringUtils.hasText(
-                                                        image.getSkuId()))
-                        .collect(
-                                Collectors.toMap(
-                                        image ->
-                                                image.getSkuId()
-                                                        .trim(),
-                                        image -> image,
-                                        (first, second) ->
-                                                second,
-                                        LinkedHashMap::new));
+                buildImageMap(images);
 
         // ========================================================
-        // RESPONSE
+        // GROUP MATERIALS
         // ========================================================
 
-        List<AdminMaterialMasterResponseWithImageDto>
-                mergedList =
-                new ArrayList<>();
+        List<MaterialGroupGetDTO> groupedMaterials =
+                buildGroupedMaterialResponse(
+                        materials,
+                        adminMap,
+                        imageMap);
 
-        for (MaterialMaster material :
-                materials) {
+        // ========================================================
+        // FINAL PAGINATED RESPONSE
+        // ========================================================
 
-            if (material == null) {
-                continue;
-            }
-
-            String sku =
-                    material
-                            .getMsCatmsSubCatmsBrandSkuId();
-
-            if (!StringUtils.hasText(sku)) {
-                continue;
-            }
-
-            sku = sku.trim();
-
-            AdminMaterialMaster adminMaterial =
-                    adminMap.get(sku);
-
-            if (adminMaterial == null) {
-                continue;
-            }
-
-            if (StringUtils.hasText(
-                    adminMaterial.getStatus())
-                    && !"Active".equalsIgnoreCase(
-                            adminMaterial.getStatus())) {
-
-                continue;
-            }
-
-            AdminMaterialMasterResponseWithImageDto dto =
-                    new AdminMaterialMasterResponseWithImageDto();
-
-            BeanUtils.copyProperties(
-                    material,
-                    dto);
-
-            dto.setSkuId(sku);
-
-            // ====================================================
-            // IMAGES
-            // ====================================================
-
-            UploadMatericalMasterImages image =
-                    imageMap.get(sku);
-
-            if (image != null) {
-
-                dto.setMaterialMasterImage1(
-                        getPresignedImageUrl(
-                                image.getMaterialMasterImage1()));
-
-                dto.setMaterialMasterImage2(
-                        getPresignedImageUrl(
-                                image.getMaterialMasterImage2()));
-
-                dto.setMaterialMasterImage3(
-                        getPresignedImageUrl(
-                                image.getMaterialMasterImage3()));
-
-                dto.setMaterialMasterImage4(
-                        getPresignedImageUrl(
-                                image.getMaterialMasterImage4()));
-
-                dto.setMaterialMasterImage5(
-                        getPresignedImageUrl(
-                                image.getMaterialMasterImage5()));
-            }
-
-            mergedList.add(dto);
-        }
-
-        return new PageImpl<>(
-                mergedList,
-                pageable,
-                total);
+        return MaterialGroupPageResponseDTO
+                .builder()
+                .message(
+                        "Material Master details retrieved successfully.")
+                .status(true)
+                .materials(
+                        groupedMaterials)
+                .currentPage(
+                        pageable.getPageNumber())
+                .pageSize(
+                        pageable.getPageSize())
+                .totalElements(
+                        total)
+                .totalPages(
+                        calculateTotalPages(
+                                total,
+                                pageable.getPageSize()))
+                .build();
     }
 
     // ============================================================
@@ -1224,12 +1259,30 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                             modelNo.trim()));
         }
 
+        // ========================================================
+        // SIZE
+        // MaterialMaster.size is BigDecimal
+        // ========================================================
+
         if (StringUtils.hasText(size)) {
 
-            predicates.add(
-                    cb.equal(
-                            root.get("size"),
-                            size.trim()));
+            try {
+
+                BigDecimal sizeValue =
+                        new BigDecimal(
+                                size.trim());
+
+                predicates.add(
+                        cb.equal(
+                                root.get("size"),
+                                sizeValue));
+
+            } catch (NumberFormatException e) {
+
+                throw new IllegalArgumentException(
+                        "Invalid size value: "
+                                + size);
+            }
         }
 
         if (StringUtils.hasText(shape)) {
@@ -1249,6 +1302,286 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
         }
 
         return predicates;
+    }
+
+    // ============================================================
+    // BUILD ADMIN MATERIAL MAP
+    // ============================================================
+
+    private Map<String, AdminMaterialMaster>
+            buildAdminMaterialMap(
+                    List<AdminMaterialMaster> adminMaterials) {
+
+        if (adminMaterials == null
+                || adminMaterials.isEmpty()) {
+
+            return Collections.emptyMap();
+        }
+
+        return adminMaterials.stream()
+                .filter(
+                        item ->
+                                item != null
+                                        && StringUtils.hasText(
+                                                item.getSkuId()))
+                .collect(
+                        Collectors.toMap(
+                                item ->
+                                        item.getSkuId()
+                                                .trim(),
+                                item -> item,
+                                (first, second) ->
+                                        second,
+                                LinkedHashMap::new));
+    }
+
+    // ============================================================
+    // BUILD IMAGE MAP
+    // ============================================================
+
+    private Map<String, UploadMatericalMasterImages>
+            buildImageMap(
+                    List<UploadMatericalMasterImages> images) {
+
+        if (images == null
+                || images.isEmpty()) {
+
+            return Collections.emptyMap();
+        }
+
+        return images.stream()
+                .filter(
+                        image ->
+                                image != null
+                                        && StringUtils.hasText(
+                                                image.getSkuId()))
+                .collect(
+                        Collectors.toMap(
+                                image ->
+                                        image.getSkuId()
+                                                .trim(),
+                                image -> image,
+                                (first, second) ->
+                                        second,
+                                LinkedHashMap::new));
+    }
+
+    // ============================================================
+    // GROUP MATERIAL RESPONSE
+    //
+    // THIS IS USED BY:
+    //
+    // 1. /get-materials
+    // 2. /home-searching
+    //
+    // STRUCTURE:
+    //
+    // category
+    //   -> subCategory
+    //      -> brand
+    //         -> materials[]
+    // ============================================================
+
+    private List<MaterialGroupGetDTO>
+            buildGroupedMaterialResponse(
+                    List<MaterialMaster> materials,
+                    Map<String, AdminMaterialMaster> adminMap,
+                    Map<String, UploadMatericalMasterImages> imageMap) {
+
+        if (materials == null
+                || materials.isEmpty()) {
+
+            return Collections.emptyList();
+        }
+
+        if (adminMap == null
+                || adminMap.isEmpty()) {
+
+            return Collections.emptyList();
+        }
+
+        Map<String, MaterialGroupGetDTO> grouped =
+                new LinkedHashMap<>();
+
+        for (MaterialMaster material :
+                materials) {
+
+            if (material == null) {
+                continue;
+            }
+
+            String sku =
+                    material
+                            .getMsCatmsSubCatmsBrandSkuId();
+
+            if (!StringUtils.hasText(sku)) {
+                continue;
+            }
+
+            sku = sku.trim();
+
+            AdminMaterialMaster adminMaterial =
+                    adminMap.get(sku);
+
+            if (adminMaterial == null) {
+                continue;
+            }
+
+            // ====================================================
+            // ONLY ACTIVE ADMIN MATERIALS
+            // ====================================================
+
+            if (!StringUtils.hasText(
+                    adminMaterial.getStatus())
+                    || !"Active".equalsIgnoreCase(
+                            adminMaterial.getStatus())) {
+
+                continue;
+            }
+
+            String category =
+                    material.getMaterialCategory();
+
+            String subCategory =
+                    material.getMaterialSubCategory();
+
+            String brand =
+                    material.getBrand();
+
+            if (!StringUtils.hasText(category)
+                    || !StringUtils.hasText(subCategory)
+                    || !StringUtils.hasText(brand)) {
+
+                continue;
+            }
+
+            category =
+                    category.trim();
+
+            subCategory =
+                    subCategory.trim();
+
+            brand =
+                    brand.trim();
+
+            // ====================================================
+            // GROUP KEY
+            // ====================================================
+
+            String groupKey =
+                    category.toUpperCase()
+                            + "|"
+                            + subCategory.toUpperCase()
+                            + "|"
+                            + brand.toUpperCase();
+
+            MaterialGroupGetDTO group =
+                    grouped.get(groupKey);
+
+            if (group == null) {
+
+                group =
+                        MaterialGroupGetDTO
+                                .builder()
+                                .materialCategory(
+                                        category)
+                                .materialSubCategory(
+                                        subCategory)
+                                .brand(
+                                        brand)
+                                .materials(
+                                        new ArrayList<>())
+                                .build();
+
+                grouped.put(
+                        groupKey,
+                        group);
+            }
+
+            // ====================================================
+            // MATERIAL DTO
+            // ====================================================
+
+            MaterialGetDTO materialDto =
+                    MaterialGetDTO
+                            .builder()
+                            .skuId(
+                                    sku)
+                            .modelNo(
+                                    material.getModelNo())
+                            .modelName(
+                                    material.getModelName())
+                            .shape(
+                                    material.getShape())
+                            .width(
+                                    material.getWidth())
+                            .length(
+                                    material.getLength())
+                            .size(
+                                    material.getSize())
+                            .thickness(
+                                    material.getThickness())
+                            .status(
+                                    material.getStatus())
+                            .updatedBy(
+                                    material.getUpdatedBy())
+                            .build();
+
+            // ====================================================
+            // IMAGES
+            // ====================================================
+
+            UploadMatericalMasterImages image =
+                    imageMap != null
+                            ? imageMap.get(sku)
+                            : null;
+
+            if (image != null) {
+
+                materialDto.setMaterialMasterImage1(
+                        getPresignedImageUrl(
+                                image.getMaterialMasterImage1()));
+
+                materialDto.setMaterialMasterImage2(
+                        getPresignedImageUrl(
+                                image.getMaterialMasterImage2()));
+
+                materialDto.setMaterialMasterImage3(
+                        getPresignedImageUrl(
+                                image.getMaterialMasterImage3()));
+
+                materialDto.setMaterialMasterImage4(
+                        getPresignedImageUrl(
+                                image.getMaterialMasterImage4()));
+
+                materialDto.setMaterialMasterImage5(
+                        getPresignedImageUrl(
+                                image.getMaterialMasterImage5()));
+            }
+
+            group.getMaterials()
+                    .add(materialDto);
+        }
+
+        return new ArrayList<>(
+                grouped.values());
+    }
+
+    // ============================================================
+    // TOTAL PAGES
+    // ============================================================
+
+    private int calculateTotalPages(
+            long totalElements,
+            int pageSize) {
+
+        if (pageSize <= 0) {
+            return 0;
+        }
+
+        return (int) Math.ceil(
+                (double) totalElements
+                        / pageSize);
     }
 
     // ============================================================
@@ -1953,13 +2286,15 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
     }
 
     // ============================================================
-    // GET MATERIALS WITH USER INFORMATION
+    // HOME SEARCHING
     //
     // PUBLIC GET API
+    //
+    // NOW RETURNS GROUPED DATA
     // ============================================================
 
     @Override
-    public AdminMaterialMasterResponseDTO getMaterialsWithUserInfo(
+    public List<MaterialGroupGetDTO> getMaterialsWithUserInfo(
             String materialCategory,
             String materialSubCategory,
             String brand,
@@ -1979,10 +2314,7 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
         if (materials == null
                 || materials.isEmpty()) {
 
-            return new AdminMaterialMasterResponseDTO(
-                    Collections.emptyList(),
-                    Collections.emptyList(),
-                    Collections.emptyList());
+            return Collections.emptyList();
         }
 
         // ========================================================
@@ -2007,10 +2339,7 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
 
         if (skuIds.isEmpty()) {
 
-            return new AdminMaterialMasterResponseDTO(
-                    Collections.emptyList(),
-                    Collections.emptyList(),
-                    Collections.emptyList());
+            return Collections.emptyList();
         }
 
         // ========================================================
@@ -2021,31 +2350,14 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                 adminMaterialMasterRepository
                         .findAllById(skuIds);
 
-        if (adminMaterials == null
-                || adminMaterials.isEmpty()) {
-
-            return new AdminMaterialMasterResponseDTO(
-                    Collections.emptyList(),
-                    Collections.emptyList(),
-                    Collections.emptyList());
-        }
-
         Map<String, AdminMaterialMaster> adminMap =
-                adminMaterials.stream()
-                        .filter(
-                                item ->
-                                        item != null
-                                                && StringUtils.hasText(
-                                                        item.getSkuId()))
-                        .collect(
-                                Collectors.toMap(
-                                        item ->
-                                                item.getSkuId()
-                                                        .trim(),
-                                        item -> item,
-                                        (first, second) ->
-                                                second,
-                                        LinkedHashMap::new));
+                buildAdminMaterialMap(
+                        adminMaterials);
+
+        if (adminMap.isEmpty()) {
+
+            return Collections.emptyList();
+        }
 
         // ========================================================
         // GET IMAGES
@@ -2056,170 +2368,16 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
                         .findAllById(skuIds);
 
         Map<String, UploadMatericalMasterImages> imageMap =
-                images.stream()
-                        .filter(
-                                image ->
-                                        image != null
-                                                && StringUtils.hasText(
-                                                        image.getSkuId()))
-                        .collect(
-                                Collectors.toMap(
-                                        image ->
-                                                image.getSkuId()
-                                                        .trim(),
-                                        image -> image,
-                                        (first, second) ->
-                                                second,
-                                        LinkedHashMap::new));
+                buildImageMap(images);
 
         // ========================================================
-        // RESPONSE LISTS
+        // BUILD GROUPED RESPONSE
         // ========================================================
 
-        List<AdminMaterialMasterResponseWithImageDto>
-                materialDtos =
-                new ArrayList<>();
-
-        List<AdminDetailsDto> adminDtos =
-                new ArrayList<>();
-
-        /*
-         * Supplier list is intentionally empty here.
-         *
-         * Reason:
-         *
-         * AdminMaterialMaster.updatedBy contains ADMIN ID.
-         *
-         * It must NOT be treated as supplier bodSeqNo.
-         *
-         * A real supplier ID/bodSeqNo relationship is required
-         * before suppliers can be populated correctly.
-         */
-        List<com.application.mrmason.dto.MaterialSupplierDto>
-                supplierDtos =
-                new ArrayList<>();
-
-        Set<String> seenAdminIds =
-                new HashSet<>();
-
-        // ========================================================
-        // BUILD RESPONSE
-        // ========================================================
-
-        for (MaterialMaster material :
-                materials) {
-
-            if (material == null) {
-                continue;
-            }
-
-            String sku =
-                    material
-                            .getMsCatmsSubCatmsBrandSkuId();
-
-            if (!StringUtils.hasText(sku)) {
-                continue;
-            }
-
-            sku = sku.trim();
-
-            AdminMaterialMaster adminMaterial =
-                    adminMap.get(sku);
-
-            if (adminMaterial == null) {
-                continue;
-            }
-
-            // ====================================================
-            // ONLY ACTIVE ADMIN MATERIALS
-            // ====================================================
-
-            if (StringUtils.hasText(
-                    adminMaterial.getStatus())
-                    && !"Active".equalsIgnoreCase(
-                            adminMaterial.getStatus())) {
-
-                continue;
-            }
-
-            // ====================================================
-            // MATERIAL DTO
-            // ====================================================
-
-            AdminMaterialMasterResponseWithImageDto dto =
-                    new AdminMaterialMasterResponseWithImageDto();
-
-            BeanUtils.copyProperties(
-                    material,
-                    dto);
-
-            dto.setSkuId(sku);
-
-            // ====================================================
-            // IMAGES
-            // ====================================================
-
-            UploadMatericalMasterImages image =
-                    imageMap.get(sku);
-
-            if (image != null) {
-
-                dto.setMaterialMasterImage1(
-                        getPresignedImageUrl(
-                                image.getMaterialMasterImage1()));
-
-                dto.setMaterialMasterImage2(
-                        getPresignedImageUrl(
-                                image.getMaterialMasterImage2()));
-
-                dto.setMaterialMasterImage3(
-                        getPresignedImageUrl(
-                                image.getMaterialMasterImage3()));
-
-                dto.setMaterialMasterImage4(
-                        getPresignedImageUrl(
-                                image.getMaterialMasterImage4()));
-
-                dto.setMaterialMasterImage5(
-                        getPresignedImageUrl(
-                                image.getMaterialMasterImage5()));
-            }
-
-            materialDtos.add(dto);
-
-            // ====================================================
-            // ADMIN DETAILS
-            // ====================================================
-
-            String adminId =
-                    adminMaterial.getUpdatedBy();
-
-            if (StringUtils.hasText(adminId)) {
-
-                AdminDetails admin =
-                        adminRepo.findByAdminId(
-                                adminId.trim());
-
-                if (admin != null
-                        && StringUtils.hasText(
-                                admin.getAdminId())
-                        && seenAdminIds.add(
-                                admin.getAdminId())) {
-
-                    adminDtos.add(
-                            toAdminDto(admin));
-                }
-            }
-        }
-
-        // ========================================================
-        // FINAL RESPONSE
-        // ========================================================
-
-        return new AdminMaterialMasterResponseDTO(
-                materialDtos,
-                adminDtos,
-                supplierDtos);
+        return buildGroupedMaterialResponse(
+                materials,
+                adminMap,
+                imageMap);
     }
 
     // ============================================================

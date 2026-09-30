@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.application.mrmason.entity.AdminMaterialMaster;
 import com.application.mrmason.enums.RegSource;
 import com.application.mrmason.service.AdminMaterialMasterService;
+import com.application.mrmason.service.AdminMaterialMasterBasedOnCategoryService;
 
 @RestController
 @RequestMapping("/admin-material-master")
@@ -31,15 +32,25 @@ public class AdminMaterialMasterController {
 	@Autowired
 	private AdminMaterialMasterService adminMaterialMasterService;
 
-	@PostMapping("/add")
-	public GenericResponse<List<MaterialGroupDTO>> createMaterials(@RequestBody List<MaterialGroupDTO> materialGroups,
-			@RequestParam("regSource") RegSource regSource) throws AccessDeniedException {
+	@Autowired 
+	private AdminMaterialMasterBasedOnCategoryService adminMaterialMasterService1;
 
-		List<MaterialGroupDTO> savedMaterials = adminMaterialMasterService.createAdminMaterialMaster(materialGroups,
-				regSource);
+	@PostMapping("/add") 
+	public ResponseEntity<?> createAdminMaterialMaster( @RequestParam("regSource") RegSource regSource, @RequestBody List<MaterialGroupDTO> requestGroups) throws AccessDeniedException 
+	{ 
+		List<MaterialGroupDTO> result = adminMaterialMasterService1.createAdminMaterialMaster( requestGroups, regSource);
+		 return ResponseEntity.ok(result); 
+		}
 
-		return new GenericResponse<>("Materials saved successfully", true, savedMaterials);
-	}
+	// @PostMapping("/add")
+	// public GenericResponse<List<MaterialGroupDTO>> createMaterials(@RequestBody List<MaterialGroupDTO> materialGroups,
+	// 		@RequestParam("regSource") RegSource regSource) throws AccessDeniedException {
+
+	// 	List<MaterialGroupDTO> savedMaterials = adminMaterialMasterService.createAdminMaterialMaster(materialGroups,
+	// 			regSource);
+
+	// 	return new GenericResponse<>("Materials saved successfully", true, savedMaterials);
+	// }
 
 	@PutMapping("/update")
 	public ResponseEntity<GenericResponse<List<AdminMaterialMaster>>> updateAdminMaterialMasters(
