@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "customer_to_retailer_order_hdr")
+@Table(name = "customer_to_retailer_order_hdr") // Customer Place order header table
 public class CustomerRetailerOrderHdrEntity {
 
     @Id
@@ -41,6 +41,9 @@ public class CustomerRetailerOrderHdrEntity {
     @Column(name = "payment_status")
     @Enumerated(EnumType.STRING)
     private OrderStatus paymentStatus;
+
+    @Column(name="total_mrp")
+    private String totalMrp;
 
     @Column(name = "expected_delivery_date")
     private LocalDate expectedDeliveryDate;

@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "customer_order_method_header")
+@Table(name = "customer_order_method_header") // Customer Cart Header Table
 public class CustomerOrderHdrEntity {
 
     @Id
