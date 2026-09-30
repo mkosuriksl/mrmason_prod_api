@@ -13,6 +13,7 @@ public class OrderRequestDto {
     private String userIdstoreId; // MS_order id
     private String expectedDeliveryDate;
     private String pincode;
+    private String totalMrp;
     private List<OrderDetailsDto> orderDetailsList;
 
 }
