@@ -1,5 +1,6 @@
 package com.application.mrmason.entity;
 
+import java.time.LocalDate;
 import java.util.Date;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -35,7 +36,7 @@ public class CustomerRetailerOrderDetailsEntity {
 	private Date updatedDate;
 	private String updatedBy;
 	private String userId;
-    private String deliveryExpectedDate;
+    private LocalDate deliveryExpectedDate;
     private String location;
     private String pincode;
     @ManyToOne

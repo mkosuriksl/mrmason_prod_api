@@ -43,7 +43,7 @@ public class CustomerRetailerOrderHdrEntity {
     private OrderStatus paymentStatus;
 
     @Column(name="total_mrp")
-    private String totalMrp;
+    private Double totalMrp;
 
     @Column(name = "expected_delivery_date")
     private LocalDate expectedDeliveryDate;
