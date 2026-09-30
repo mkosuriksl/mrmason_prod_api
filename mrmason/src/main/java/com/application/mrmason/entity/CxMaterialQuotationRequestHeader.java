@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name="cx_material_quotation_request_header")
+@Table(name="cx_material_quotation_request_header")// retailer_order_header
 public class CxMaterialQuotationRequestHeader {
 
     @Id

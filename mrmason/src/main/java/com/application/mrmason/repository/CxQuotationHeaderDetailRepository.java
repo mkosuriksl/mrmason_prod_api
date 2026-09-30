@@ -1,5 +1,6 @@
 package com.application.mrmason.repository;
 
+import com.application.mrmason.entity.CustomerRetailerOrderDetailsEntity;
 import com.application.mrmason.entity.CxMaterialQuotationRequestHeaderDetails;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -7,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CxQuotationHeaderDetailRepository extends JpaRepository<CxMaterialQuotationRequestHeaderDetails, String> {
@@ -37,4 +39,6 @@ public interface CxQuotationHeaderDetailRepository extends JpaRepository<CxMater
             @Param("expectedDeliveryDate") String expectedDeliveryDate,
             @Param("updatedDate") String updatedDate
     );
+
+
 }

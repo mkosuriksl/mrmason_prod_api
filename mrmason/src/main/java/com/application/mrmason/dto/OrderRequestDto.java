@@ -11,9 +11,9 @@ public class OrderRequestDto {
     private String location;
     private String deliveryMethod;
     private String userIdstoreId; // MS_order id
-    private String expectedDeliveryDate;
+    private LocalDate expectedDeliveryDate;
     private String pincode;
-    private String totalMrp;
+    private Double totalMrp;
     private List<OrderDetailsDto> orderDetailsList;
 
 }
