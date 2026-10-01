@@ -20,6 +20,8 @@ import java.util.stream.Collectors;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
@@ -471,71 +473,71 @@ public class AdminMaterialMasterBasedOnCategoryServiceImpl
     // ============================================================
     // GET LOGGED-IN USER
     // ============================================================
-private UserInfo getLoggedInUserInfo(RegSource regSource) {
+    private UserInfo getLoggedInUserInfo(RegSource regSource) {
 
-    String loggedInUserEmail =
-            AuthDetailsProvider.getLoggedEmail();
+        String loggedInUserEmail =
+                AuthDetailsProvider.getLoggedEmail();
 
-    Collection<? extends GrantedAuthority> loggedInRole =
-            AuthDetailsProvider.getLoggedRole();
+        Collection<? extends GrantedAuthority> loggedInRole =
+                AuthDetailsProvider.getLoggedRole();
 
-    List<String> roleNames =
-            loggedInRole.stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .map(role -> role.replace("ROLE_", ""))
-                    .collect(Collectors.toList());
+        List<String> roleNames =
+                loggedInRole.stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(role -> role.replace("ROLE_", ""))
+                        .collect(Collectors.toList());
 
-    // Get first logged-in role
-    String roleName = roleNames.get(0);
+        // Get first logged-in role
+        String roleName = roleNames.get(0);
 
-    UserType userType =
-            UserType.valueOf(roleName);
+        UserType userType =
+                UserType.valueOf(roleName);
 
-    String userId;
+        String userId;
 
-    // ========================================================
-    // ADMIN
-    // ========================================================
+        // ========================================================
+        // ADMIN
+        // ========================================================
 
-    if (userType == UserType.Adm) {
+        if (userType == UserType.Adm) {
 
-        AdminDetails admin =
-                adminRepo.findByEmailAndUserType(
-                        loggedInUserEmail,
-                        userType)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Admin not found: "
-                                        + loggedInUserEmail));
+            AdminDetails admin =
+                    adminRepo.findByEmailAndUserType(
+                                    loggedInUserEmail,
+                                    userType)
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Admin not found: "
+                                                    + loggedInUserEmail));
 
-        // Use Admin ID
-        userId = admin.getAdminId();
+            // Use Admin ID
+            userId = admin.getAdminId();
 
+        }
+
+        // ========================================================
+        // MS / OTHER USERS
+        // ========================================================
+
+        else {
+
+            MaterialSupplierQuotationUser user =
+                    materialSupplierQuotationUserDAO
+                            .findByEmailAndUserTypeAndRegSource(
+                                    loggedInUserEmail,
+                                    userType,
+                                    regSource)
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Material User not found: "
+                                                    + loggedInUserEmail));
+
+            // Use Material Supplier bodSeqNo
+            userId = user.getBodSeqNo();
+        }
+
+        return new UserInfo(userId);
     }
-
-    // ========================================================
-    // MS / OTHER USERS
-    // ========================================================
-
-    else {
-
-        MaterialSupplierQuotationUser user =
-                materialSupplierQuotationUserDAO
-                        .findByEmailAndUserTypeAndRegSource(
-                                loggedInUserEmail,
-                                userType,
-                                regSource)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Material User not found: "
-                                                + loggedInUserEmail));
-
-        // Use Material Supplier bodSeqNo
-        userId = user.getBodSeqNo();
-    }
-
-    return new UserInfo(userId);
-}
     // ============================================================
     // SAVE CATEGORY MASTER
     // ============================================================
@@ -760,7 +762,7 @@ private UserInfo getLoggedInUserInfo(RegSource regSource) {
 
             if (material == null
                     || !StringUtils.hasText(
-                            material.getSkuId())) {
+                    material.getSkuId())) {
 
                 continue;
             }
@@ -1304,8 +1306,8 @@ private UserInfo getLoggedInUserInfo(RegSource regSource) {
     // ============================================================
 
     private Map<String, AdminMaterialMaster>
-            buildAdminMaterialMap(
-                    List<AdminMaterialMaster> adminMaterials) {
+    buildAdminMaterialMap(
+            List<AdminMaterialMaster> adminMaterials) {
 
         if (adminMaterials == null
                 || adminMaterials.isEmpty()) {
@@ -1318,7 +1320,7 @@ private UserInfo getLoggedInUserInfo(RegSource regSource) {
                         item ->
                                 item != null
                                         && StringUtils.hasText(
-                                                item.getSkuId()))
+                                        item.getSkuId()))
                 .collect(
                         Collectors.toMap(
                                 item ->
@@ -1335,8 +1337,8 @@ private UserInfo getLoggedInUserInfo(RegSource regSource) {
     // ============================================================
 
     private Map<String, UploadMatericalMasterImages>
-            buildImageMap(
-                    List<UploadMatericalMasterImages> images) {
+    buildImageMap(
+            List<UploadMatericalMasterImages> images) {
 
         if (images == null
                 || images.isEmpty()) {
@@ -1349,7 +1351,7 @@ private UserInfo getLoggedInUserInfo(RegSource regSource) {
                         image ->
                                 image != null
                                         && StringUtils.hasText(
-                                                image.getSkuId()))
+                                        image.getSkuId()))
                 .collect(
                         Collectors.toMap(
                                 image ->
@@ -1366,10 +1368,10 @@ private UserInfo getLoggedInUserInfo(RegSource regSource) {
     // ============================================================
 
     private List<MaterialGroupGetDTO>
-            buildGroupedMaterialResponse(
-                    List<MaterialMaster> materials,
-                    Map<String, AdminMaterialMaster> adminMap,
-                    Map<String, UploadMatericalMasterImages> imageMap) {
+    buildGroupedMaterialResponse(
+            List<MaterialMaster> materials,
+            Map<String, AdminMaterialMaster> adminMap,
+            Map<String, UploadMatericalMasterImages> imageMap) {
 
         if (materials == null
                 || materials.isEmpty()) {
@@ -1417,7 +1419,7 @@ private UserInfo getLoggedInUserInfo(RegSource regSource) {
             if (!StringUtils.hasText(
                     adminMaterial.getStatus())
                     || !"Active".equalsIgnoreCase(
-                            adminMaterial.getStatus())) {
+                    adminMaterial.getStatus())) {
 
                 continue;
             }
@@ -2192,8 +2194,8 @@ private UserInfo getLoggedInUserInfo(RegSource regSource) {
 
     @Override
     public List<Map<String, Object>>
-            findDistinctMaterialCategoryWithSubCategory()
-                    throws AccessDeniedException {
+    findDistinctMaterialCategoryWithSubCategory()
+            throws AccessDeniedException {
 
         List<Object[]> results =
                 materialMasterRepository
@@ -2389,6 +2391,7 @@ private UserInfo getLoggedInUserInfo(RegSource regSource) {
                 admin.getAdminName());
 
         return dto;
+
+
     }
 }
-

@@ -60,4 +60,18 @@ public interface AdminMaterialMasterRepository extends JpaRepository<AdminMateri
 			nativeQuery = true)
 	List<Object[]> findRawMaterialItemsByCategory(@Param("category") String category);
 
+
+/*	@Query("SELECT a FROM AdminMaterialMaster a WHERE " +
+			"(:location IS NULL OR :location = '' OR LOWER(a.location) = LOWER(:location)) AND " +
+			"(:materialCategory IS NULL OR :materialCategory = '' OR LOWER(a.materialCategory) = LOWER(:materialCategory)) AND " +
+			"(:subMaterialCategory IS NULL OR :subMaterialCategory = '' OR LOWER(a.subMaterialCategory) = LOWER(:subMaterialCategory)) AND " +
+			"(:brand IS NULL OR :brand = '' OR LOWER(a.brand) = LOWER(:brand)) AND " +
+			"(:modelName IS NULL OR :modelName = '' OR LOWER(a.modelName) = LOWER(:modelName))")
+	List<AdminMaterialMaster> findByFilters(
+			@Param("location") String location,
+			@Param("materialCategory") String materialCategory,
+			@Param("subMaterialCategory") String subMaterialCategory,
+			@Param("brand") String brand,
+			@Param("modelName") String modelName);*/
+
 }

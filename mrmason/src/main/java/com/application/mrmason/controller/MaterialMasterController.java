@@ -93,7 +93,7 @@ public class MaterialMasterController {
 	
 	@GetMapping("/home-search-by-location")
     public ResponseEntity<GenericResponse<ResponseGetMasterDto>> getMaterials(
-            @RequestParam String location,
+            @RequestParam(required = false) String location,
             @RequestParam(required = false) String materialCategory,
             @RequestParam(required = false) String materialSubCategory,
             @RequestParam(required = false) String brand,
