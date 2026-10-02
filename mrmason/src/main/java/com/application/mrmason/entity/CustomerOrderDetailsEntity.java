@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "customer_order_method_details")
+@Table(name = "customer_order_method_details")  //Customer Cart Details table
 public class CustomerOrderDetailsEntity {
 	@Id
 	@Column(name = "Orderline_Id")

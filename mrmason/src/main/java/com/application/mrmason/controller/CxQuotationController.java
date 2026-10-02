@@ -1,8 +1,6 @@
 package com.application.mrmason.controller;
 
-import com.application.mrmason.dto.CxQuotationRequestDto;
-import com.application.mrmason.dto.CxQuotationResponseDto;
-import com.application.mrmason.dto.GenericResponse;
+import com.application.mrmason.dto.*;
 import com.application.mrmason.service.impl.CxQuotationServiceImpl;
 
 import lombok.Data;
@@ -122,6 +120,27 @@ public class CxQuotationController {
         }catch (Exception ex) {
             GenericResponse<List<CxQuotationResponseDto>> errorResponse = GenericResponse.<List<CxQuotationResponseDto>>builder()
                     .message("Failed to fetch quotations: " + ex.getMessage())
+                    .success(false)
+                    .data(null)
+                    .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    @GetMapping("get_material_request_details_info")
+    public ResponseEntity<GenericResponse<List<MaterialResponseDetailsDto>>> getCustomerRetailerDetails (MaterialRequestDetailsDto dto){
+
+        try{
+            List<MaterialResponseDetailsDto> responseData = cxQuotationService.getMaterialRequest(dto);
+            GenericResponse<List<MaterialResponseDetailsDto>> response = GenericResponse.<List<MaterialResponseDetailsDto>>builder()
+                    .message("Fetched material request successfully")
+                    .success(true)
+                    .data(responseData)
+                    .build();
+            return ResponseEntity.ok(response);
+        }catch (Exception ex) {
+            GenericResponse<List<MaterialResponseDetailsDto>> errorResponse = GenericResponse.<List<MaterialResponseDetailsDto>>builder()
+                    .message("Failed to fetch material request: " + ex.getMessage())
                     .success(false)
                     .data(null)
                     .build();

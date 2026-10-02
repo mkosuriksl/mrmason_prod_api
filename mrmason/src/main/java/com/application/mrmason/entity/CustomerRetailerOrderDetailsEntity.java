@@ -1,5 +1,6 @@
 package com.application.mrmason.entity;
 
+import java.time.LocalDate;
 import java.util.Date;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -15,7 +16,7 @@ import lombok.*;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "customer_to_retailer_order_detail")
+@Table(name = "customer_to_retailer_order_detail") // Customer place order details
 public class CustomerRetailerOrderDetailsEntity {
     @Id
     private String lineItemId;
@@ -35,6 +36,9 @@ public class CustomerRetailerOrderDetailsEntity {
 	private Date updatedDate;
 	private String updatedBy;
 	private String userId;
+    private LocalDate deliveryExpectedDate;
+    private String location;
+    private String pincode;
     @ManyToOne
     @JsonBackReference
     @JoinColumn(name="orderId",referencedColumnName = "orderId")

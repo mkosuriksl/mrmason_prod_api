@@ -2,6 +2,8 @@ package com.application.mrmason.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -12,7 +14,10 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import com.application.mrmason.entity.*;
+import com.application.mrmason.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.application.mrmason.dto.CustomerOrderDetailsRepo;
@@ -21,22 +26,12 @@ import com.application.mrmason.dto.OrderDetailsCustomerDto;
 import com.application.mrmason.dto.OrderDetailsDto;
 import com.application.mrmason.dto.OrderQtyUpdateDto;
 import com.application.mrmason.dto.OrderRequestDto;
-import com.application.mrmason.entity.CustomerOrderDetailsEntity;
-import com.application.mrmason.entity.CustomerOrderHdrEntity;
-import com.application.mrmason.entity.CustomerRegistration;
-import com.application.mrmason.entity.CustomerRetailerOrderDetailsEntity;
-import com.application.mrmason.entity.CustomerRetailerOrderHdrEntity;
-import com.application.mrmason.entity.MaterialRequirementByRequest;
-import com.application.mrmason.entity.UserType;
 import com.application.mrmason.enums.OrderStatus;
 import com.application.mrmason.enums.RegSource;
 import com.application.mrmason.exceptions.ResourceNotFoundException;
-import com.application.mrmason.repository.CustomerRegistrationRepo;
-import com.application.mrmason.repository.CustomerRetailerOrderDetailsRepo;
-import com.application.mrmason.repository.CustomerRetailerOrderHdrRepo;
-import com.application.mrmason.repository.MaterialRequirementByRequestRepository;
 import com.application.mrmason.security.AuthDetailsProvider;
 import com.application.mrmason.dto.MaterialRequestsFilterDto;
+import com.application.mrmason.dto.MaterialRequestbyCustomerResponseHomePageDto;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -63,18 +58,35 @@ public class CustomerOrderHandler {
 	private EntityManager entityManager;
 	@Autowired
 	private MaterialRequirementByRequestRepository materialRequirementByRequestRepository;
+	@Autowired
+	private AdminDetailsRepo adminDetailsRepo;
+	@Autowired
+	private MaterialSupplierQuotationUserDAO materialSupplierQuotationUserDAO;
+
+
+
 	@Transactional
 	public CustomerRetailerOrderHdrEntity placeOrder(OrderRequestDto dto) {
+
+		String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
+
+		CustomerRegistration customer = customerRegisterRepository.findByUserEmail(currentUser);
+
+		String creatorId = customer.getUserid();
+
+		if(creatorId == null) {
+			throw new ResourceNotFoundException("User not found");
+		}
+
 	    // 1️⃣ Fetch customer cart header
 	    CustomerOrderHdrEntity cartHeader = customerCartHdrRepo.findById(dto.getCustomerCartOrderId())
-	            .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
+	            .orElseThrow(() -> new ResourceNotFoundException("Cart not found" + dto.getCustomerCartOrderId()));
 
 		// 3️⃣ Fetch all cart details for this cart
 		List<CustomerOrderDetailsEntity> cartDetails =
 				customerCartDetailsRepo.findByOrderId(cartHeader.getOrderId());
-
-/*		String userId = cartDetails.get(0).getMsUserId();
-		if (userId == null || userId.trim().isEmpty()) {
+		String userId = cartDetails.get(0).getMsUserId();
+		/*if (userId == null || userId.trim().isEmpty()) {
 			throw new IllegalStateException("Cannot place order: Retailer/User ID is missing from cart details.");
 		}*/
 
@@ -87,26 +99,31 @@ public class CustomerOrderHandler {
 			throw new RuntimeException("Mismatch between cart items and order request items");
 		}
 
-
 		// 2️⃣ Create order header
 	    CustomerRetailerOrderHdrEntity orderHdr = new CustomerRetailerOrderHdrEntity();
 	    orderHdr.setCustomerCartOrderId(cartHeader.getOrderId());
 	    orderHdr.setCustomerId(dto.getCustomerId());
-	    String userId=cartHeader.getCustomerOrderDetailsEntities().get(0).getMsUserId();
-	    orderHdr.setRetailerId(userId); // ✅ ensure this is set BEFORE generating orderId
+	    String msUserId=cartHeader.getCustomerOrderDetailsEntities().get(0).getMsUserId();
+	    orderHdr.setRetailerId(msUserId); // ✅ ensure this is set BEFORE generating orderId
 	    orderHdr.setDeliveryMethod(dto.getDeliveryMethod());
 	    orderHdr.setOrderStatus(OrderStatus.NEW);
 	    orderHdr.setPaymentStatus(OrderStatus.PENDING);
-	    orderHdr.setOrderUpdatedBy("System");
+	    orderHdr.setOrderUpdatedBy(creatorId);
+		orderHdr.setDeliveryLocation(dto.getLocation());
 		orderHdr.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
-		orderHdr.setDeliveryLocation( dto.getLocation() );
-		orderHdr.setPincode( dto.getPincode());
+		orderHdr.setPincode(dto.getPincode());
+		orderHdr.setOrderDate(LocalDate.now());
+		orderHdr.setOrderUpdatedBy(creatorId);
+		orderHdr.setTotalMrp(dto.getTotalMrp());
 	    orderHdr.setOrderDate(LocalDate.now());
 	    orderHdr.setOrderUpdatedDate(new Date());
 
 	    // 2a️⃣ Generate orderId with userIdstoreId included
-	    String sequenceNumber = String.format("%06d", new Random().nextInt(900000) + 100000);
-	    orderHdr.setOrderId("INVOICE" +LocalDate.now().getYear()+ sequenceNumber + "_" + userId );
+	    String DateFormat = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHH"));
+		orderHdr.setOrderId("MR"+DateFormat);
+
+/*		String sequenceNumber = String.format("%06d", new Random().nextInt(900000) + 100000);
+	    orderHdr.setOrderId("INVOICE" +LocalDate.now().getYear()+ sequenceNumber + "_" + msUserId );*/
 
 	    orderHdrRepo.save(orderHdr);
 		List<CustomerRetailerOrderDetailsEntity> retailerOrderDetailsList = new ArrayList<>();
@@ -134,6 +151,11 @@ public class CustomerOrderHandler {
 	        orderDetail.setTotalAmount(cartDetail.getTotal());
 	        orderDetail.setSkuIdUserId(cartDetail.getSkuIdUserId());
 	        orderDetail.setCustomerRetailerOrderHdr(orderHdr);
+			orderDetail.setDeliveryExpectedDate(dto.getExpectedDeliveryDate());
+			orderDetail.setLocation(dto.getLocation());
+			orderDetail.setUpdatedBy(creatorId);
+			orderDetail.setUpdatedDate(new Date());
+			orderDetail.setPincode(dto.getPincode());
 	        orderDetailsRepo.save(orderDetail);
 			retailerOrderDetailsList.add(orderDetail);
 	        
@@ -162,7 +184,7 @@ public class CustomerOrderHandler {
 	        
 	        cartDetail.setStatus(OrderStatus.COMPLETED);
 	        cartDetail.setUpdatedDate(new Date());
-	        cartDetail.setUpdatedBy("System");
+	        cartDetail.setUpdatedBy(creatorId);
 
 	    }
 
@@ -172,7 +194,7 @@ public class CustomerOrderHandler {
 	    // 6️⃣ Update cart header
 	    cartHeader.setStatus(OrderStatus.COMPLETED);
 	    cartHeader.setOrderUpdatedDate(new Date());
-	    cartHeader.setOrderUpdatedBy("System");
+	    cartHeader.setOrderUpdatedBy(creatorId);
 
 
 	    customerCartHdrRepo.save(cartHeader);
@@ -319,11 +341,7 @@ public class CustomerOrderHandler {
 
 
 //home page customer material requests query
-public List<CustomerRetailerOrderHdrEntity> findMaterialRequestsByFilters(MaterialRequestsFilterDto filterDto) {
-       
-	
-	
-	
+public List<MaterialRequestbyCustomerResponseHomePageDto> findMaterialRequestsByFilters(MaterialRequestsFilterDto filterDto) {
 
     return orderHdrRepo.findMaterialRequestsByFilters(
             filterDto.getMaterialCategory(),

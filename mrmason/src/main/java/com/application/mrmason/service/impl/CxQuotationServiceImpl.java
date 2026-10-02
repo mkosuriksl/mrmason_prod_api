@@ -2,6 +2,8 @@ package com.application.mrmason.service.impl;
 
 import com.application.mrmason.dto.CxQuotationRequestDto;
 import com.application.mrmason.dto.CxQuotationResponseDto;
+import com.application.mrmason.dto.MaterialRequestDetailsDto;
+import com.application.mrmason.dto.MaterialResponseDetailsDto;
 import com.application.mrmason.entity.*;
 import com.application.mrmason.enums.RegSource;
 import com.application.mrmason.repository.*;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,6 +34,7 @@ public class CxQuotationServiceImpl implements CxQuotationService {
     private final CustomerRegistrationRepo customerRegistrationRepo;
     private final AdminDetailsRepo adminDetailsRepo;
     private final EmailService emailService;
+    private final CustomerRetailerOrderDetailsRepo customerRetailerOrderDetailsRepo;
 
     @Override
     @Transactional
@@ -368,16 +372,67 @@ public class CxQuotationServiceImpl implements CxQuotationService {
         return responseList;
     }
 
-    private int getNextSequenceNumber(String basePrefix) {
-        return cxQuotationRepository.findLastMaterialRequestId(basePrefix)
-                .map(lastId -> {
-                    try {
-                        String[] parts = lastId.split("_");
-                        return Integer.parseInt(parts[1]) + 1;
-                    } catch (Exception e) {
-                        return 1;
-                    }
-                })
-                .orElse(1);
+    public List<MaterialResponseDetailsDto> getMaterialRequest(MaterialRequestDetailsDto dto) {
+
+        String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        AdminDetails admin = adminDetailsRepo.findByEmail(currentEmail);
+        if (admin == null) {
+            throw new SecurityException("Access denied: Only Admin and Material Supplier roles can access all quotations.");
+        }
+
+        UserType userRole = admin.getUserType();
+        if (userRole == null || (!userRole.equals(UserType.Adm) && !userRole.equals(UserType.MS))) {
+            throw new SecurityException("Access denied: Only ADMIN and MS roles can access all quotations.");
+        }
+
+        List<CustomerRetailerOrderDetailsEntity> orderDetails =
+                customerRetailerOrderDetailsRepo.findByOrderId(dto.getOrderId());
+
+        if (orderDetails == null || orderDetails.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Map<String, List<CustomerRetailerOrderDetailsEntity>> groupedDetails = orderDetails.stream()
+                .filter(detail -> detail.getCustomerCartOrderLineId() != null)
+                .collect(Collectors.groupingBy(detail -> detail.getCustomerCartOrderLineId().split("_")[0]));
+
+        List<MaterialResponseDetailsDto> responseList = new ArrayList<>();
+
+        for (Map.Entry<String, List<CustomerRetailerOrderDetailsEntity>> entry : groupedDetails.entrySet()) {
+            List<CustomerRetailerOrderDetailsEntity> lineItems = entry.getValue();
+
+            if (lineItems != null && !lineItems.isEmpty()) {
+
+                List<MaterialResponseDetailsDto.CustomerRetailerDetails> responseRetailerDetails = lineItems.stream()
+                        .map(item -> MaterialResponseDetailsDto.CustomerRetailerDetails.builder()
+                                .lineItemId(item.getCustomerCartOrderLineId())
+                                .productCategory(item.getMaterialCategory())
+                                .productSubCategory(item.getMaterialSubCategory())
+                                .brand(item.getBrand())
+                                .skuIdUserId(item.getSkuIdUserId())
+                                .mrp(item.getMrp())
+                                .modelName(item.getModelName())
+                                .orderQty(item.getOrderQty())
+                                .build())
+                        .collect(Collectors.toList());
+
+
+                CustomerRetailerOrderDetailsEntity firstItem = lineItems.get(0);
+
+                MaterialResponseDetailsDto responseDto = MaterialResponseDetailsDto.builder()
+                        .orderId(dto.getOrderId())
+                        .updatedBy(firstItem.getUpdatedBy())
+                        .deliveryLocation(firstItem.getLocation())
+                        .expectedDeliveryDate(firstItem.getDeliveryExpectedDate())
+                        .pincode(firstItem.getPincode())
+                        .lineItems(responseRetailerDetails)
+                        .build();
+
+                responseList.add(responseDto);
+            }
+        }
+
+        return responseList;
     }
 }

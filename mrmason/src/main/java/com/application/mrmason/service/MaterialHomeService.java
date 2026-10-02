@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import com.application.mrmason.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,10 +22,6 @@ import com.application.mrmason.entity.MaterialPricing;
 import com.application.mrmason.entity.MaterialSupplierAssets;
 import com.application.mrmason.entity.MaterialSupplierQuotationUser;
 import com.application.mrmason.entity.UploadMatericalMasterImages;
-import com.application.mrmason.repository.MaterialMasterRepository;
-import com.application.mrmason.repository.MaterialPricingRepository;
-import com.application.mrmason.repository.MaterialSupplierQuotationUserDAO;
-import com.application.mrmason.repository.UploadMatericalMasterImagesRepository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -52,52 +49,70 @@ public class MaterialHomeService {
 	@Autowired
 	private UploadMatericalMasterImagesRepository uploadMMRepo;
 
+	@Autowired
+	private AdminMaterialMasterRepository adminMaterialMasterRepository;
+
 	public ResponseGetMasterDto getMaterialsWithPagination(String location, String materialCategory,
 			String materialSubCategory, String brand, String modelName, int page, int size) {
+
 		Pageable pageable = PageRequest.of(page, size);
 
+		List<MaterialSupplierDto> suppliers = Collections.emptyList();
+		List<String> userIds = Collections.emptyList();
+
 		// 1. Get suppliers by location
-		List<MaterialSupplierQuotationUser> supplierEntities = materialSupplierQuotationUserDAO
-				.findByLocationContaining(location);
+	/*	List<MaterialSupplierQuotationUser> supplierEntities = materialSupplierQuotationUserDAO
+				.findByLocationContaining(location);*/
 
-		// Map to DTO
-		List<MaterialSupplierDto> suppliers = supplierEntities.stream().map(s -> {
-			MaterialSupplierDto dto = new MaterialSupplierDto();
-			dto.setBodSeqNo(s.getBodSeqNo());
-			dto.setName(s.getName());
-			dto.setBusinessName(s.getBusinessName());
-			dto.setMobile(s.getMobile());
-			dto.setEmail(s.getEmail());
-			dto.setAddress(s.getAddress());
-			dto.setCity(s.getCity());
-			dto.setDistrict(s.getDistrict());
-			dto.setState(s.getState());
-			dto.setLocation(s.getLocation());
-			return dto;
-		}).toList();
+		if (location != null && !location.trim().isEmpty()) {
+			List<MaterialSupplierQuotationUser> supplierEntities =
+					materialSupplierQuotationUserDAO.findByLocationContaining(location);
 
-		if (suppliers.isEmpty()) {
-			ResponseGetMasterDto emptyResponse = new ResponseGetMasterDto();
-			emptyResponse.setMessage("No suppliers found for location: " + location);
-			emptyResponse.setStatus(false);
-			emptyResponse.setMaterialMaster(Collections.emptyList());
-			emptyResponse.setMaterialSupplier(Collections.emptyList());
-			emptyResponse.setMasterPricing(Collections.emptyList());
-			emptyResponse.setCurrentPage(page);
-			emptyResponse.setPageSize(size);
-			emptyResponse.setTotalElements(0);
-			emptyResponse.setTotalPages(0);
-			return emptyResponse;
+			// Map to DTO
+			suppliers = supplierEntities.stream().map(s -> {
+				MaterialSupplierDto dto = new MaterialSupplierDto();
+				dto.setBodSeqNo(s.getBodSeqNo());
+				dto.setName(s.getName());
+				dto.setBusinessName(s.getBusinessName());
+				dto.setMobile(s.getMobile());
+				dto.setEmail(s.getEmail());
+				dto.setAddress(s.getAddress());
+				dto.setCity(s.getCity());
+				dto.setDistrict(s.getDistrict());
+				dto.setState(s.getState());
+				dto.setLocation(s.getLocation());
+				return dto;
+			}).toList();
+
+			if (suppliers.isEmpty()) {
+				ResponseGetMasterDto emptyResponse = new ResponseGetMasterDto();
+				emptyResponse.setMessage("No suppliers found for location: " + location);
+				emptyResponse.setStatus(false);
+				emptyResponse.setMaterialMaster(Collections.emptyList());
+				emptyResponse.setMaterialSupplier(Collections.emptyList());
+				emptyResponse.setMasterPricing(Collections.emptyList());
+				emptyResponse.setCurrentPage(page);
+				emptyResponse.setPageSize(size);
+				emptyResponse.setTotalElements(0);
+				emptyResponse.setTotalPages(0);
+				return emptyResponse;
+			}
+
+			userIds = supplierEntities.stream().map(MaterialSupplierQuotationUser::getBodSeqNo)
+					.filter(Objects::nonNull)
+					.toList();
 		}
 
-		List<String> userIds = supplierEntities.stream().map(MaterialSupplierQuotationUser::getBodSeqNo).toList();
+			// 2. Fetch MaterialMaster using CriteriaBuilder with pagination
+			CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+			CriteriaQuery<MaterialMaster> query = cb.createQuery(MaterialMaster.class);
+			Root<MaterialMaster> root = query.from(MaterialMaster.class);
 
-		// 2. Fetch MaterialMaster using CriteriaBuilder with pagination
-		CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-		CriteriaQuery<MaterialMaster> query = cb.createQuery(MaterialMaster.class);
-		Root<MaterialMaster> root = query.from(MaterialMaster.class);
+			List<Predicate> predicates = buildPredicate(cb, root, userIds, materialCategory, materialSubCategory, brand, modelName);
+			query.select(root).where(cb.and(predicates.toArray(new Predicate[0])));
 
-		List<Predicate> predicates = new ArrayList<>();
+
+	/*	List<Predicate> predicates = new ArrayList<>();
 		predicates.add(root.get("updatedBy").in(userIds));
 
 		if (materialCategory != null && !materialCategory.isEmpty())
@@ -107,67 +122,117 @@ public class MaterialHomeService {
 		if (brand != null && !brand.isEmpty())
 			predicates.add(cb.equal(root.get("brand"), brand));
 		if (modelName != null && !modelName.isEmpty())
-			predicates.add(cb.equal(root.get("modelName"), modelName));
+			predicates.add(cb.equal(root.get("modelName"), modelName));*/
 
-		query.select(root).where(cb.and(predicates.toArray(new Predicate[0])));
-		TypedQuery<MaterialMaster> typedQuery = entityManager.createQuery(query);
-		typedQuery.setFirstResult((int) pageable.getOffset());
-		typedQuery.setMaxResults(pageable.getPageSize());
-		List<MaterialMaster> masterList = typedQuery.getResultList();
+			TypedQuery<MaterialMaster> typedQuery = entityManager.createQuery(query);
+			typedQuery.setFirstResult((int) pageable.getOffset());
+			typedQuery.setMaxResults(pageable.getPageSize());
+			List<MaterialMaster> masterList = typedQuery.getResultList();
 
-		// 3. Count query for pagination
-		CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
-		Root<MaterialMaster> countRoot = countQuery.from(MaterialMaster.class);
-		List<Predicate> countPredicates = new ArrayList<>();
-		countPredicates.add(countRoot.get("updatedBy").in(userIds));
+			// 3. Count query for pagination
+			CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
+			Root<MaterialMaster> countRoot = countQuery.from(MaterialMaster.class);
 
-		if (materialCategory != null && !materialCategory.isEmpty())
-			countPredicates.add(cb.equal(countRoot.get("materialCategory"), materialCategory));
-		if (materialSubCategory != null && !materialSubCategory.isEmpty())
-			countPredicates.add(cb.equal(countRoot.get("materialSubCategory"), materialSubCategory));
-		if (brand != null && !brand.isEmpty())
-			countPredicates.add(cb.equal(countRoot.get("brand"), brand));
-		if (modelName != null && !modelName.isEmpty())
-			countPredicates.add(cb.equal(countRoot.get("modelName"), modelName));
-
+		List<Predicate> countPredicates = buildPredicate(cb, countRoot, userIds, materialCategory, materialSubCategory, brand, modelName);
 		countQuery.select(cb.count(countRoot)).where(cb.and(countPredicates.toArray(new Predicate[0])));
 		Long totalElements = entityManager.createQuery(countQuery).getSingleResult();
 
-		// 4. Fetch pricing for current page SKUs
-		List<String> skuList = masterList.stream().map(MaterialMaster::getMsCatmsSubCatmsBrandSkuId).toList();
-		List<MaterialPricing> pricingList = pricingRepo.findByUserIdSkuIn(skuList);
+		List<String> skuList = masterList.stream()
+				.map(MaterialMaster::getMsCatmsSubCatmsBrandSkuId)
+				.filter(Objects::nonNull)
+				.toList();
 
-		List<UploadMatericalMasterImages> imageList = uploadMMRepo.findBySkuIdIn(skuList);
+		List<MaterialPricing> pricingList = skuList.isEmpty()
+				? Collections.emptyList()
+				: pricingRepo.findByUserIdSkuIn(skuList);
 
-	    // 6. Map SKU → Image Entity
-	    Map<String, UploadMatericalMasterImages> imageMap = imageList.stream()
-	            .collect(Collectors.toMap(UploadMatericalMasterImages::getSkuId, img -> img));
+		List<UploadMatericalMasterImages> imageList = skuList.isEmpty()
+				? Collections.emptyList()
+				: uploadMMRepo.findBySkuIdIn(skuList);
 
-	    // 7. Set image data in MaterialMaster transient fields
-	    for (MaterialMaster material : masterList) {
-	        UploadMatericalMasterImages img = imageMap.get(material.getMsCatmsSubCatmsBrandSkuId());
-	        if (img != null) {
-	            material.setMaterialMasterImage1(img.getMaterialMasterImage1());
-	            material.setMaterialMasterImage2(img.getMaterialMasterImage2());
-	            material.setMaterialMasterImage3(img.getMaterialMasterImage3());
-	            material.setMaterialMasterImage4(img.getMaterialMasterImage4());
-	            material.setMaterialMasterImage5(img.getMaterialMasterImage5());
-	        }
-	    }
+		// 5. Map Images to Transient Fields
+		Map<String, UploadMatericalMasterImages> imageMap = imageList.stream()
+				.collect(Collectors.toMap(
+						UploadMatericalMasterImages::getSkuId,
+						img -> img,
+						(existing, replacement) -> existing
+				));
 
-		// 5. Build Response DTO
-		ResponseGetMasterDto responseDto = new ResponseGetMasterDto();
-		responseDto.setMessage("Material Master is retrieved successfully.");
-		responseDto.setStatus(true);
-		responseDto.setMaterialMaster(masterList);
-		responseDto.setMaterialSupplier(suppliers);
-		responseDto.setMasterPricing(pricingList);
-		responseDto.setCurrentPage(page);
-		responseDto.setPageSize(size);
-		responseDto.setTotalElements(totalElements);
-		responseDto.setTotalPages((int) Math.ceil((double) totalElements / size));
+		/*	List<Predicate> countPredicates = new ArrayList<>();
+			countPredicates.add(countRoot.get("updatedBy").in(userIds));
 
-		return responseDto;
+			if (materialCategory != null && !materialCategory.isEmpty())
+				countPredicates.add(cb.equal(countRoot.get("materialCategory"), materialCategory));
+			if (materialSubCategory != null && !materialSubCategory.isEmpty())
+				countPredicates.add(cb.equal(countRoot.get("materialSubCategory"), materialSubCategory));
+			if (brand != null && !brand.isEmpty())
+				countPredicates.add(cb.equal(countRoot.get("brand"), brand));
+			if (modelName != null && !modelName.isEmpty())
+				countPredicates.add(cb.equal(countRoot.get("modelName"), modelName));
+
+			countQuery.select(cb.count(countRoot)).where(cb.and(countPredicates.toArray(new Predicate[0])));
+			Long totalElements = entityManager.createQuery(countQuery).getSingleResult();
+
+			// 4. Fetch pricing for current page SKUs
+			List<String> skuList = masterList.stream().map(MaterialMaster::getMsCatmsSubCatmsBrandSkuId).toList();
+			List<MaterialPricing> pricingList = pricingRepo.findByUserIdSkuIn(skuList);
+
+			List<UploadMatericalMasterImages> imageList = uploadMMRepo.findBySkuIdIn(skuList);
+
+			// 6. Map SKU → Image Entity
+			Map<String, UploadMatericalMasterImages> imageMap = imageList.stream()
+					.collect(Collectors.toMap(UploadMatericalMasterImages::getSkuId, img -> img));*/
+
+			// 7. Set image data in MaterialMaster transient fields
+			for (MaterialMaster material : masterList) {
+				UploadMatericalMasterImages img = imageMap.get(material.getMsCatmsSubCatmsBrandSkuId());
+				if (img != null) {
+					material.setMaterialMasterImage1(img.getMaterialMasterImage1());
+					material.setMaterialMasterImage2(img.getMaterialMasterImage2());
+					material.setMaterialMasterImage3(img.getMaterialMasterImage3());
+					material.setMaterialMasterImage4(img.getMaterialMasterImage4());
+					material.setMaterialMasterImage5(img.getMaterialMasterImage5());
+				}
+			}
+
+			// 5. Build Response DTO
+			ResponseGetMasterDto responseDto = new ResponseGetMasterDto();
+			responseDto.setMessage("Material Master is retrieved successfully.");
+			responseDto.setStatus(true);
+			responseDto.setMaterialMaster(masterList);
+			responseDto.setMaterialSupplier(Collections.emptyList());
+			responseDto.setMasterPricing(pricingList);
+			responseDto.setCurrentPage(page);
+			responseDto.setPageSize(size);
+			responseDto.setTotalElements(totalElements);
+			responseDto.setTotalPages((int) Math.ceil((double) totalElements / size));
+
+			return responseDto;
+	}
+	private <T> List<Predicate> buildPredicate(CriteriaBuilder cb, Root<T> root, List<String> userIds,
+	                                           String materialCategory, String materialSubCategory,
+	                                           String brand, String modelName) {
+		List<Predicate> predicates = new ArrayList<>();
+
+		// SAFE IN CLAUSE: Only add if userIds is non-null AND non-empty
+		if (userIds != null && !userIds.isEmpty()) {
+			predicates.add(root.get("updatedBy").in(userIds));
+		}
+
+		if (materialCategory != null && !materialCategory.trim().isEmpty()) {
+			predicates.add(cb.equal(root.get("materialCategory"), materialCategory.trim()));
+		}
+		if (materialSubCategory != null && !materialSubCategory.trim().isEmpty()) {
+			predicates.add(cb.equal(root.get("materialSubCategory"), materialSubCategory.trim()));
+		}
+		if (brand != null && !brand.trim().isEmpty()) {
+			predicates.add(cb.equal(root.get("brand"), brand.trim()));
+		}
+		if (modelName != null && !modelName.trim().isEmpty()) {
+			predicates.add(cb.equal(root.get("modelName"), modelName.trim()));
+		}
+
+		return predicates;
 	}
 
 	public List<String> autoSearchLocations(String locationPrefix, String materialCategory, String materialSubCategory,

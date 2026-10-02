@@ -141,6 +141,8 @@ public class StoreMasterServiceImpl implements StoreMasterService {
         // SET CODE-DERIVED FIELDS
         // ========================================================
 
+        storeMaster.setStoreId("STR" + storeMaster.getStoreId());
+
         storeMaster.setStoreIdUserId(
                 storeMaster.getStoreId()
                         + "_"

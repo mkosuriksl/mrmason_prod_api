@@ -26,6 +26,9 @@ public class StoreMaster {
     // =====================================================
 
     @Id
+    @Column(name = "storeid_userid")
+    private String storeIdUserId;
+
     @Column(name = "storeid", nullable = false, unique = true)
     private String storeId;
 
@@ -74,8 +77,6 @@ public class StoreMaster {
     // These are NOT entered from UI
     // =====================================================
 
-    @Column(name = "storeid_userid")
-    private String storeIdUserId;
 
     @Column(name = "updatedby")
     private String updatedBy;

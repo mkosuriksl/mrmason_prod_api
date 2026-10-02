@@ -16,4 +16,3 @@ public class AdminMaterialMasterResponseDTO {
     private List<MaterialSupplierDto> suppliers;
 }
 
-

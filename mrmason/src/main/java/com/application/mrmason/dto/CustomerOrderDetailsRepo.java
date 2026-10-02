@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.application.mrmason.entity.CustomerOrderDetailsEntity;
+import com.application.mrmason.entity.CustomerOrderHdrEntity;
 
 public interface CustomerOrderDetailsRepo extends JpaRepository<CustomerOrderDetailsEntity, String> {
 	Optional<CustomerOrderDetailsEntity> findByOrderlineId(String orderLineId);
@@ -23,5 +24,22 @@ public interface CustomerOrderDetailsRepo extends JpaRepository<CustomerOrderDet
 		);
 
     List<CustomerOrderDetailsEntity> findByCustomerOrderOrderHdrEntity_UpdatedBy(String updatedBy);
+
+
+@Query("""
+    SELECT c
+    FROM CustomerOrderHdrEntity c
+    LEFT JOIN FETCH c.customerOrderDetailsEntities
+    WHERE c.updatedBy = :updatedBy
+      AND c.status = 0
+""")
+Optional<CustomerOrderHdrEntity> findActiveCartByUpdatedBy(
+        @Param("updatedBy") String updatedBy
+);
+
+
+
+
+
 
 }
