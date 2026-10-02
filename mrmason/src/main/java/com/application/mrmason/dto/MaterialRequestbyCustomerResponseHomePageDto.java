@@ -16,5 +16,9 @@ public class MaterialRequestbyCustomerResponseHomePageDto {
     private LocalDate expectedDeliveryDate;
     private String deliveryLocation;
     private OrderStatus orderStatus;
+    private String deliveryMethod;
+    private Double totalMrp;
+    private LocalDate orderDate;
 }
 
+    
