@@ -5,16 +5,13 @@ import java.math.BigDecimal;
 import java.nio.file.AccessDeniedException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.application.mrmason.dto.*;
+import com.application.mrmason.entity.*;
 import com.application.mrmason.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,17 +25,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.application.mrmason.entity.AdminDetails;
-import com.application.mrmason.entity.CMaterialReqHeaderDetailsEntity;
-import com.application.mrmason.entity.CMaterialRequestHeaderEntity;
-import com.application.mrmason.entity.CustomerRegistration;
-import com.application.mrmason.entity.Invoice;
-import com.application.mrmason.entity.MaterialSupplier;
-import com.application.mrmason.entity.MaterialSupplierQuotationHeader;
-import com.application.mrmason.entity.MaterialSupplierQuotationHeaderHistory;
-import com.application.mrmason.entity.MaterialSupplierQuotationUser;
-import com.application.mrmason.entity.User;
-import com.application.mrmason.entity.UserType;
 import com.application.mrmason.enums.RegSource;
 import com.application.mrmason.enums.Status;
 import com.application.mrmason.exceptions.ResourceNotFoundException;
@@ -100,7 +86,167 @@ public class materialSupplierService {
 	@Autowired
 	private CMaterialRequestHeaderRepository cMaterialRequestHeaderRepository;
 
-	@Transactional
+	@Autowired
+	private CustomerRetailerOrderHdrRepo retailerHeaderRepo;
+	@Autowired
+	private CustomerRetailerOrderDetailsRepo retailerDetailRepo;
+	@Autowired
+	private MaterialSupplierInvoiceHeaderDetailsRepository materialSupplierInvoiceHeaderDetailsRepository;
+
+		@Transactional
+		public GenericResponse<List<MaterialSupplier>> saveItems(List<MaterialSupplier> materialQuotation,
+			String cMatRequestId, String invoiceNumber, Status invoiceStatus, Status quotationStatus,
+			LocalDate invoiceDate, RegSource regSource) {
+
+		UserInfo userInfo = getLoggedInUserInfo(regSource);
+
+		// ✅ Validate header
+		Optional<CustomerRetailerOrderHdrEntity> headerOpt = retailerHeaderRepo
+				.findByOrderId(cMatRequestId);
+
+		if (headerOpt.isEmpty()) {
+			throw new ResourceNotFoundException(
+					"order id not found in CustomerRetailerOrderHdrEntity: " + cMatRequestId);
+		}
+		String localDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+		String quotationId = "QT" + localDate ;
+
+		String quotationInvoiceNumber = "INV" + "-" + System.currentTimeMillis();
+
+		List<MaterialSupplier> validatedItems = new ArrayList<>();
+		Set<String> seenLineItems = new HashSet<>();
+		int lineItemSeq = 1;
+
+		for (MaterialSupplier item : materialQuotation) {
+			if (!item.getMaterialLineItem().startsWith(cMatRequestId + "_")) {
+				throw new IllegalArgumentException("MaterialLineItem '" + item.getMaterialLineItem()
+						+ "' does not belong to cMatRequestId '" + cMatRequestId + "'");
+			}
+
+			item.setQuotationIdLineId(quotationId + "_" + String.format("%04d", lineItemSeq++));
+			item.setQuotationId(quotationId);
+			item.setCmatRequestId(cMatRequestId);
+
+			if (!seenLineItems.add(item.getMaterialLineItem())) {
+				throw new IllegalArgumentException(
+						"Duplicate materialLineItem found in request: " + item.getMaterialLineItem());
+			}
+
+			boolean exists = materialSupplierRepository.existsBySupplierIdAndMaterialLineItem(userInfo.userId,
+					item.getMaterialLineItem());
+			if (exists) {
+				throw new IllegalArgumentException(
+						"MaterialLineItem already exists for this supplier: " + item.getMaterialLineItem());
+			}
+
+			Optional<CustomerRetailerOrderDetailsEntity> materialReqOpt = retailerDetailRepo
+					.findById(item.getMaterialLineItem());
+			if (materialReqOpt.isEmpty()) {
+				throw new ResourceNotFoundException(
+						"Item line id not found in CustomerRetailerOrderDetailsEntity: " + item.getMaterialLineItem());
+			}
+
+
+			CustomerRetailerOrderDetailsEntity materialReq = materialReqOpt.get();
+
+			// ✅ Set MRP, Discount, GST from order details if not provided in item
+			if (item.getMrp() == null && materialReq.getMrp() != null) {
+				item.setMrp(BigDecimal.valueOf(materialReq.getMrp()));
+			}
+			if (item.getDiscount() == null && materialReq.getDiscount() != 0) {
+				item.setDiscount(BigDecimal.valueOf(materialReq.getDiscount()));
+			}
+			if (item.getGst() == 0 && materialReq.getGst() != 0) {
+				item.setGst(materialReq.getGst());
+			}
+
+			item.setInvoiceNumber(quotationInvoiceNumber);
+			item.setInvoiceStatus(Status.INVOICED);
+			item.setQuotationStatus(Status.QUOTED);
+			item.setInvoiceDate(LocalDate.now());
+			item.setUpdatedDate(LocalDate.now());
+			item.setSupplierId(userInfo.userId);
+			item.setStatus(Status.QUOTED);
+			item.setQuotedDate(LocalDate.now());
+
+			// ✅ Calculate and set quotedAmount (MRP - Discount) * (1 + GST/100)
+			if (item.getMrp() != null) {
+				BigDecimal discount = item.getDiscount() != null ? item.getDiscount() : BigDecimal.ZERO;
+				double gst = item.getGst();
+				BigDecimal gstMultiplier = BigDecimal.valueOf(1 + gst / 100.0);
+				BigDecimal baseAmount = item.getMrp().subtract(discount);
+				BigDecimal calculatedQuotedAmount = baseAmount.multiply(gstMultiplier);
+				item.setQuotedAmount(calculatedQuotedAmount);
+			}
+
+			validatedItems.add(item);
+		}
+
+		// ✅ Save detail quotations
+		List<MaterialSupplier> saved = materialSupplierRepository.saveAll(validatedItems);
+
+		// ✅ Save header
+		BigDecimal totalQuotedAmount = saved.stream().map(MaterialSupplier::getQuotedAmount).filter(Objects::nonNull)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
+
+
+			MaterialSupplierQuotationHeader quotationHeader = MaterialSupplierQuotationHeader.builder()
+					.quotationId(quotationId)
+					.cmatRequestId(cMatRequestId)
+					.supplierId(userInfo.userId)
+					.quotationStatus(quotationStatus)
+					.invoiceStatus(invoiceStatus)
+					.invoiceNumber(invoiceNumber)
+					.invoiceDate(LocalDate.now())
+					.quotedDate(LocalDate.now())
+					.updatedDate(LocalDate.now())
+					.updatedBy(userInfo.userId)
+					.build();
+
+			materialSupplierQuotationHeaderRepository.save(quotationHeader);
+		quotationHeader.setUpdatedBy(userInfo.userId);
+
+		materialSupplierQuotationHeaderRepository.save(quotationHeader);
+
+			List<MaterialSupplierInvoiceHeaderDetails> invoiceDetailsList = new ArrayList<>();
+			for (MaterialSupplier savedItem : saved) {
+
+				MaterialSupplierInvoiceHeaderDetails invoiceDetail = MaterialSupplierInvoiceHeaderDetails.builder()
+						.quotationIdLineId(savedItem.getQuotationIdLineId())
+						.cMaterialRequestId(savedItem.getCmatRequestId())
+						.discount(savedItem.getDiscount())
+						.gst(BigDecimal.valueOf(savedItem.getGst()))
+						.invoiceDate(LocalDate.now())
+						.invoiceNumber(quotationInvoiceNumber)
+						.invoiceNumberLineId(quotationInvoiceNumber + "_" + String.format("%04d", lineItemSeq++))
+						.invoiceStatus(invoiceStatus)
+						.materialLineId(savedItem.getMaterialLineItem())
+						.mrp(savedItem.getMrp() != null ? savedItem.getMrp().toString() : "0")
+						.quotationId(savedItem.getQuotationId())
+						.quotationStatus(quotationStatus)
+						.quotedAmount(savedItem.getQuotedAmount() != null ? savedItem.getQuotedAmount() : BigDecimal.ZERO)
+						.quotedDate(savedItem.getQuotedDate())
+						.status(savedItem.getStatus())
+						.supplierId(savedItem.getSupplierId())
+						.updatedBy(userInfo.userId)
+						.updatedDate(LocalDate.now())
+						.userType(UserType.MS)
+						.build();
+				invoiceDetailsList.add(invoiceDetail);
+			}
+
+			materialSupplierInvoiceHeaderDetailsRepository.saveAll(invoiceDetailsList);
+
+		MaterialSupplierQuotationUser supplier = materialSupplierQuotationUserDAO.findByBodSeqNo(userInfo.userId);
+		if (supplier == null) {
+			throw new ResourceNotFoundException("Supplier not found for id: " + userInfo.userId);
+		}
+
+		sendQuotationEmail(supplier.getEmail(), saved);
+		return new GenericResponse<>("Material Quotations saved successfully by user: " + userInfo.userId, true, saved);
+	}
+
+	/*@Transactional
 	public GenericResponse<List<MaterialSupplier>> saveItems(List<MaterialSupplier> materialQuotation,
 			String cMatRequestId, String invoiceNumber, Status invoiceStatus, Status quotationStatus,
 			LocalDate invoiceDate, RegSource regSource) {
@@ -187,7 +333,7 @@ public class materialSupplierService {
 		// ✅ Send PDF email
 		sendQuotationEmail(supplier.getEmail(), saved);
 		return new GenericResponse<>("Material Quotations saved successfully by user: " + userInfo.userId, true, saved);
-	}
+	}*/
 
 	private void sendQuotationEmail(String toMail, List<MaterialSupplier> quotations) {
 		try {
@@ -198,7 +344,66 @@ public class materialSupplierService {
 			helper.setTo(toMail);
 			helper.setSubject("Your Material Supplier Quotation");
 
-			String body = "Dear Supplier,<br><br>Please find attached your quotation details.<br><br>Regards,<br>Team";
+			
+			StringBuilder bodyBuilder = new StringBuilder();
+			bodyBuilder.append("<html><body>");
+			bodyBuilder.append("<p>Dear Supplier,<br><br>Please find attached your quotation details.<br><br>");
+			bodyBuilder.append("<h3>Quotation Summary</h3>");
+
+			bodyBuilder.append("<br><h3>Item Details</h3>");
+			bodyBuilder.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse:collapse; font-family:Arial; font-size:12px;'>");
+			bodyBuilder.append("<tr style='background-color:#f0f0f0;'>")
+					.append("<th>Material Line Item</th>")
+					.append("<th>Quotation ID Line ID</th>")
+					.append("<th>CAT Request ID</th>")
+					.append("<th>Brand</th>")
+					.append("<th>SKU</th>")
+					.append("<th>Product Name</th>")
+					.append("<th>MRP</th>")
+					.append("<th>Discount</th>")
+					.append("<th>Quoted Amount</th>")
+					.append("<th>Supplier ID</th>")
+					.append("<th>Quoted Date</th>")
+					.append("<th>Invoice Number</th>")
+					.append("<th>Invoice Status</th>")
+					.append("<th>Quotation Status</th>")
+					.append("</tr>");
+			
+			for (MaterialSupplier s : quotations) {
+				String brand = "";
+				String sku = "";
+				String productName = "";
+				
+				Optional<CustomerRetailerOrderDetailsEntity> detailOpt = retailerDetailRepo.findById(s.getMaterialLineItem());
+				if (detailOpt.isPresent()) {
+					CustomerRetailerOrderDetailsEntity detail = detailOpt.get();
+					brand = detail.getBrand() != null ? detail.getBrand() : "";
+					sku = detail.getSkuIdUserId() != null ? detail.getSkuIdUserId() : "";
+					productName = detail.getModelName() != null ? detail.getModelName() : "";
+				}
+				
+				bodyBuilder.append("<tr>")
+						.append("<td>").append(s.getMaterialLineItem() != null ? s.getMaterialLineItem() : "").append("</td>")
+						.append("<td>").append(s.getQuotationIdLineId() != null ? s.getQuotationIdLineId() : "").append("</td>")
+						.append("<td>").append(s.getCmatRequestId() != null ? s.getCmatRequestId() : "").append("</td>")
+						.append("<td>").append(brand).append("</td>")
+						.append("<td>").append(sku).append("</td>")
+						.append("<td>").append(productName).append("</td>")
+						.append("<td>").append(s.getMrp() != null ? s.getMrp().toString() : "").append("</td>")
+						.append("<td>").append(s.getDiscount() != null ? s.getDiscount().toString() : "").append("</td>")
+						.append("<td>").append(s.getQuotedAmount() != null ? s.getQuotedAmount().toString() : "").append("</td>")
+						.append("<td>").append(s.getSupplierId() != null ? s.getSupplierId() : "").append("</td>")
+						.append("<td>").append(s.getQuotedDate() != null ? s.getQuotedDate().toString() : "").append("</td>")
+						.append("<td>").append(s.getInvoiceNumber() != null ? s.getInvoiceNumber() : "").append("</td>")
+						.append("<td>").append(s.getInvoiceStatus() != null ? s.getInvoiceStatus().toString() : "").append("</td>")
+						.append("<td>").append(s.getQuotationStatus() != null ? s.getQuotationStatus().toString() : "").append("</td>")
+						.append("</tr>");
+			}
+			
+			bodyBuilder.append("</table>");
+			bodyBuilder.append("<br>Regards,<br>Team</p></body></html>");
+			
+			String body = bodyBuilder.toString();
 			helper.setText(body, true);
 
 			// ✅ attach PDF
@@ -229,13 +434,12 @@ public class materialSupplierService {
 		document.add(title);
 		document.add(new Paragraph("\n"));
 
-		// ✅ Flexible column widths, auto-fit page
-		float[] columnWidths = { 3, 3, 3, 2, 2, 3, 3, 3, 3 };
+		// ✅ Flexible column widths - updated for Brand, SKU, Product Name, MRP, Discount, Quoted Amount, Quoted Date, GST
+		float[] columnWidths = { 2, 2, 3, 2, 2, 2, 2, 2 };
 		Table table = new Table(UnitValue.createPercentArray(columnWidths)).useAllAvailableWidth();
 
-		// Headers
-		String[] headers = { "Material Line Item", "Quotation Id", "CmatRequest Id", "MRP", "Discount", "Quoted Amount",
-				"Supplier Id", "Quoted Date", "gst" };
+		// Headers - Brand, SKU, Product Name, MRP, Discount, Quoted Amount, Quoted Date, GST
+		String[] headers = { "Brand", "SKU", "Product Name", "MRP", "Discount", "Quoted Amount", "Quoted Date", "GST" };
 
 		for (String header : headers) {
 			table.addHeaderCell(new Cell().add(new Paragraph(header).setFont(bold).setFontSize(10))
@@ -244,18 +448,24 @@ public class materialSupplierService {
 
 		// Data rows
 		for (MaterialSupplier s : suppliers) {
-			String itemName = "";
-			Optional<CMaterialReqHeaderDetailsEntity> headerOpt = cMaterialReqHeaderDetailsRepository
-					.findById(s.getMaterialLineItem());
-			if (headerOpt.isPresent()) {
-				itemName = headerOpt.get().getItemName();
+			String brand = "";
+			String sku = "";
+			String productName = "";
+			
+			Optional<CustomerRetailerOrderDetailsEntity> detailOpt = retailerDetailRepo.findById(s.getMaterialLineItem());
+			if (detailOpt.isPresent()) {
+				CustomerRetailerOrderDetailsEntity detail = detailOpt.get();
+				brand = detail.getBrand() != null ? detail.getBrand() : "";
+				sku = detail.getSkuIdUserId() != null ? detail.getSkuIdUserId() : "";
+				productName = detail.getModelName() != null ? detail.getModelName() : "";
 			}
+			
 			table.addCell(new Cell().add(
-					new Paragraph(itemName).setFont(normal).setFontSize(9).setTextAlignment(TextAlignment.CENTER)));
-			table.addCell(new Cell().add(new Paragraph(s.getQuotationId() != null ? s.getQuotationId() : "")
-					.setFont(normal).setFontSize(9).setTextAlignment(TextAlignment.CENTER)));
-			table.addCell(new Cell().add(new Paragraph(s.getCmatRequestId() != null ? s.getCmatRequestId() : "")
-					.setFont(normal).setFontSize(9).setTextAlignment(TextAlignment.CENTER)));
+					new Paragraph(brand).setFont(normal).setFontSize(9).setTextAlignment(TextAlignment.CENTER)));
+			table.addCell(new Cell().add(
+					new Paragraph(sku).setFont(normal).setFontSize(9).setTextAlignment(TextAlignment.CENTER)));
+			table.addCell(new Cell().add(
+					new Paragraph(productName).setFont(normal).setFontSize(9).setTextAlignment(TextAlignment.CENTER)));
 			table.addCell(new Cell().add(new Paragraph(s.getMrp() != null ? s.getMrp().toString() : "").setFont(normal)
 					.setFontSize(9).setTextAlignment(TextAlignment.CENTER)));
 			table.addCell(new Cell().add(new Paragraph(s.getDiscount() != null ? s.getDiscount().toString() : "")
@@ -263,8 +473,6 @@ public class materialSupplierService {
 			table.addCell(
 					new Cell().add(new Paragraph(s.getQuotedAmount() != null ? s.getQuotedAmount().toString() : "")
 							.setFont(normal).setFontSize(9).setTextAlignment(TextAlignment.CENTER)));
-			table.addCell(new Cell().add(new Paragraph(s.getSupplierId() != null ? s.getSupplierId() : "")
-					.setFont(normal).setFontSize(9).setTextAlignment(TextAlignment.CENTER)));
 			table.addCell(new Cell().add(new Paragraph(s.getQuotedDate() != null ? s.getQuotedDate().toString() : "")
 					.setFont(normal).setFontSize(9).setTextAlignment(TextAlignment.CENTER)));
 			table.addCell(new Cell().add(new Paragraph(String.valueOf(s.getGst())).setFont(normal).setFontSize(9)
@@ -327,6 +535,17 @@ public class materialSupplierService {
 //	            existingTask.setStatus(task.getStatus());
 			existingTask.setGst(task.getGst());
 			existingTask.setMrp(task.getMrp());
+
+			// ✅ Recalculate quotedAmount (MRP - Discount) * (1 + GST/100)
+			if (existingTask.getMrp() != null) {
+				BigDecimal discount = existingTask.getDiscount() != null ? existingTask.getDiscount() : BigDecimal.ZERO;
+				double gst = existingTask.getGst();
+				BigDecimal gstMultiplier = BigDecimal.valueOf(1 + gst / 100.0);
+				BigDecimal baseAmount = existingTask.getMrp().subtract(discount);
+				BigDecimal calculatedQuotedAmount = baseAmount.multiply(gstMultiplier);
+				existingTask.setQuotedAmount(calculatedQuotedAmount);
+			}
+
 			updatedTasks.add(existingTask);
 		}
 
