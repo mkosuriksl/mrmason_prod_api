@@ -9,23 +9,23 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
 @Entity
-
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table(name = "material_supplier_quotation_header")
 public class MaterialSupplierQuotationHeader {
 
 	@Id
+	@Column(name = "qutotation_id")
+	private String quotationId;
+
 	@Column(name = "cmatmaterial_requestid")
 	private String cmatRequestId;
-
-	@Column(name = "qutotation_id")
-	private String quotationId; 
-
 
 	@Column(name = "quoted_amount")
 	private BigDecimal quotedAmount;

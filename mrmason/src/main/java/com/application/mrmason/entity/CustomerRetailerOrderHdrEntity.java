@@ -10,11 +10,13 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @Entity
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "customer_to_retailer_order_hdr") // Customer Place order header table
@@ -22,7 +24,7 @@ public class CustomerRetailerOrderHdrEntity {
 
     @Id
     private String orderId;
-    
+
     private String customerCartOrderId;
     private String customerId;
     private String retailerId;
@@ -34,7 +36,7 @@ public class CustomerRetailerOrderHdrEntity {
     private LocalDate orderDate;
 
     private Date orderUpdatedDate;
-    
+
     @Column(name = "delivery_method")
     private String deliveryMethod;
 
