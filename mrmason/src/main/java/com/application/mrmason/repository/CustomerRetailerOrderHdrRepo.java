@@ -62,15 +62,18 @@ public interface CustomerRetailerOrderHdrRepo extends JpaRepository<CustomerReta
         h.customerId,
         h.expectedDeliveryDate,
         h.deliveryLocation,
-        h.orderStatus
+        h.orderStatus,
+        h.deliveryMethod,
+        h.totalMrp,
+        h.orderDate
     )
     FROM CustomerRetailerOrderHdrEntity h
     JOIN h.customerRetailerOrderDetailsList d
     WHERE (d.materialCategory = :materialCategory)
       AND ( d.materialSubCategory = :materialSubCategory)
       AND ( :brand IS NULL OR d.brand = :brand)
-      AND (:postedDateFrom IS NULL OR d.updatedDate >= :postedDateFrom)
-      AND (:postedDateTo IS NULL OR d.updatedDate < :postedDateTo)
+      AND (:postedDateFrom IS NULL OR h.orderDate >= :postedDateFrom)
+      AND (:postedDateTo IS NULL OR h.orderDate < :postedDateTo)
       AND (:deliveryDateFrom IS NULL OR h.expectedDeliveryDate >= :deliveryDateFrom)
       AND (:deliveryDateTo IS NULL OR h.expectedDeliveryDate < :deliveryDateTo)
       AND (:deliveryLocation IS NULL OR h.deliveryLocation = :deliveryLocation)
