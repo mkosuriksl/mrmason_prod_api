@@ -51,19 +51,23 @@ public class SpWorkersServiceImpl implements SpWorkersService {
 			if ( workerDetails== null) {
 				SpWorkers spworker = workerRepo.save(worker);
 				User user = new User();
-//				user.setBodSeqNo(spworker.getWorkerId());
 				user.setBodSeqNo(spworker.getWorkerId());
 				user.setMobile(worker.getWorkPhoneNum());
 				user.setEmail(worker.getWorkerEmail());
 				user.setName(worker.getWorkerName());
 				user.setVerified("yes");
 				user.setLocation(worker.getWorkerLocation());
-//				user.setEmail("none");
 				user.setEmail(worker.getWorkerEmail());
 				user.setStatus("active");
 				UserType userType = UserType.fromString("Worker");
 				user.setUserType(userType);
-				user.setServiceCategory(userData.get().getServiceCategory());
+				// Use worker's service category if provided, otherwise use parent's service category
+				String workerServiceCategory = worker.getServiceCategory();
+				if (workerServiceCategory != null && !workerServiceCategory.isEmpty()) {
+					user.setServiceCategory(workerServiceCategory);
+				} else {
+					user.setServiceCategory(userData.get().getServiceCategory());
+				}
 				user.setRegSource(userData.get().getRegSource());
 				String encodedPass = byCrypt.encode("mrmason@123");
 				user.setPassword(encodedPass);
@@ -72,8 +76,6 @@ public class SpWorkersServiceImpl implements SpWorkersService {
 				ServicePersonLogin spDetails = new ServicePersonLogin();
 				spDetails.setMobile(spworker.getWorkPhoneNum());
 				spDetails.setEmail(worker.getWorkerEmail());
-			
-//				spDetails.setEmail("none");
 				spDetails.setMobVerify("yes");
 				spDetails.setEVerify("yes");
 				spDetails.setRegSource(userData.get().getRegSource());
@@ -86,7 +88,7 @@ public class SpWorkersServiceImpl implements SpWorkersService {
 		return null;
 	}
 	@Override
-	public Page<SpWorkers> getWorkers(String spId, String workerId, String phno, String location, String workerAvail, Pageable pageable) {
+	public Page<SpWorkers> getWorkers(String spId, String workerId, String phno, String location, String workerAvail, String serviceCategory, Pageable pageable) {
 	    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
 
 	    // === Selection query ===
@@ -109,6 +111,9 @@ public class SpWorkersServiceImpl implements SpWorkersService {
 	    if (workerAvail != null && !workerAvail.trim().isEmpty()) {
 	        predicates.add(cb.equal(root.get("workerAvail"), workerAvail));
 	    }
+		if(serviceCategory != null && !serviceCategory.trim().isEmpty()) {
+			predicates.add(cb.equal(root.get("serviceCategory"), serviceCategory));
+		}
 
 	    query.select(root).where(cb.and(predicates.toArray(new Predicate[0])));
 	    TypedQuery<SpWorkers> typedQuery = entityManager.createQuery(query);
@@ -136,6 +141,10 @@ public class SpWorkersServiceImpl implements SpWorkersService {
 	        countPredicates.add(cb.equal(countRoot.get("workerAvail"), workerAvail));
 	    }
 
+		if(serviceCategory != null && !serviceCategory.trim().isEmpty()) {
+			countPredicates.add(cb.equal(countRoot.get("serviceCategory"), serviceCategory));
+		}
+
 	    countQuery.select(cb.count(countRoot)).where(cb.and(countPredicates.toArray(new Predicate[0])));
 	    Long total = entityManager.createQuery(countQuery).getSingleResult();
 
@@ -149,12 +158,16 @@ public class SpWorkersServiceImpl implements SpWorkersService {
 		String location = worker.getWorkerLocation();
 		String workerAvail = worker.getWorkerAvail();
 		String workerStatus = worker.getWorkerStatus();
-		String workerName=worker.getWorkerName();		
+		String workerName=worker.getWorkerName();
+		String serviceCategory=worker.getServiceCategory();		
 		Optional<SpWorkers> user = Optional.of(workerRepo.findByWorkerIdAndServicePersonId(workerId, spId));
 		if (user.isPresent()) {
 			user.get().setWorkerLocation(location);
 			user.get().setWorkerAvail(workerAvail);
 			user.get().setWorkerName(workerName);
+			if (serviceCategory != null && !serviceCategory.isEmpty()) {
+				user.get().setServiceCategory(serviceCategory);
+			}
 			workerRepo.save(user.get());
 			return "updated";
 		}
@@ -173,6 +186,7 @@ public class SpWorkersServiceImpl implements SpWorkersService {
 		spWorker.setWorkerLocation(workerDetails.getWorkerLocation());
 		spWorker.setWorkPhoneNum(workerDetails.getWorkPhoneNum());
 		spWorker.setWorkerEmail(workerEmail.getWorkerEmail());
+		spWorker.setServiceCategory(workerDetails.getServiceCategory());
 		User data=userRepo.findByEmailOrMobile(phno, phno);
 		spWorker.setWorkerStatus(data.getStatus());
 		return spWorker;
@@ -192,6 +206,99 @@ public class SpWorkersServiceImpl implements SpWorkersService {
 	    Root<SpWorkers> root = query.from(SpWorkers.class);
 	    List<Predicate> predicates = new ArrayList<>();
 
+	    if (spId != null && !spId.trim().isEmpty()) {
+	        predicates.add(cb.equal(root.get("servicePersonId"), spId));
+	    }
+	    if (workerId != null && !workerId.trim().isEmpty()) {
+	        predicates.add(cb.equal(root.get("workerId"), workerId));
+	    }
+	    if (phno != null && !phno.trim().isEmpty()) {
+	        predicates.add(cb.equal(root.get("workPhoneNum"), phno));
+	    }
+	    if (location != null && !location.trim().isEmpty()) {
+	        predicates.add(cb.equal(root.get("workerLocation"), location));
+	    }
+	    if (workerAvail != null && !workerAvail.trim().isEmpty()) {
+	        predicates.add(cb.equal(root.get("workerAvail"), workerAvail));
+	    }
+	    if (workerName != null && !workerName.trim().isEmpty()) {
+	        predicates.add(cb.like(cb.lower(root.get("workerName")), workerName.toLowerCase() + "%"));
+	    }
+	    query.select(root).where(cb.and(predicates.toArray(new Predicate[0])));
+	    return entityManager.createQuery(query).getResultList();
+	}
+
+	@Override
+	public Page<SpWorkers> getWorkersByCategory(String category, String spId, String workerId, String phno, String location, String workerAvail, Pageable pageable) {
+	    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+
+	    CriteriaQuery<SpWorkers> query = cb.createQuery(SpWorkers.class);
+	    Root<SpWorkers> root = query.from(SpWorkers.class);
+	    List<Predicate> predicates = new ArrayList<>();
+
+	    if (category != null && !category.trim().isEmpty()) {
+	        predicates.add(cb.equal(root.get("serviceCategory"), category));
+	    }
+	    if (spId != null && !spId.trim().isEmpty()) {
+	        predicates.add(cb.equal(root.get("servicePersonId"), spId));
+	    }
+	    if (workerId != null && !workerId.trim().isEmpty()) {
+	        predicates.add(cb.equal(root.get("workerId"), workerId));
+	    }
+	    if (phno != null && !phno.trim().isEmpty()) {
+	        predicates.add(cb.equal(root.get("workPhoneNum"), phno));
+	    }
+	    if (location != null && !location.trim().isEmpty()) {
+	        predicates.add(cb.equal(root.get("workerLocation"), location));
+	    }
+	    if (workerAvail != null && !workerAvail.trim().isEmpty()) {
+	        predicates.add(cb.equal(root.get("workerAvail"), workerAvail));
+	    }
+
+	    query.select(root).where(cb.and(predicates.toArray(new Predicate[0])));
+	    TypedQuery<SpWorkers> typedQuery = entityManager.createQuery(query);
+	    typedQuery.setFirstResult((int) pageable.getOffset());
+	    typedQuery.setMaxResults(pageable.getPageSize());
+
+	    CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
+	    Root<SpWorkers> countRoot = countQuery.from(SpWorkers.class);
+	    List<Predicate> countPredicates = new ArrayList<>();
+
+	    if (category != null && !category.trim().isEmpty()) {
+	        countPredicates.add(cb.equal(countRoot.get("serviceCategory"), category));
+	    }
+	    if (spId != null && !spId.trim().isEmpty()) {
+	        countPredicates.add(cb.equal(countRoot.get("servicePersonId"), spId));
+	    }
+	    if (workerId != null && !workerId.trim().isEmpty()) {
+	        countPredicates.add(cb.equal(countRoot.get("workerId"), workerId));
+	    }
+	    if (phno != null && !phno.trim().isEmpty()) {
+	        countPredicates.add(cb.equal(countRoot.get("workPhoneNum"), phno));
+	    }
+	    if (location != null && !location.trim().isEmpty()) {
+	        countPredicates.add(cb.equal(countRoot.get("workerLocation"), location));
+	    }
+	    if (workerAvail != null && !workerAvail.trim().isEmpty()) {
+	        countPredicates.add(cb.equal(countRoot.get("workerAvail"), workerAvail));
+	    }
+
+	    countQuery.select(cb.count(countRoot)).where(cb.and(countPredicates.toArray(new Predicate[0])));
+	    Long total = entityManager.createQuery(countQuery).getSingleResult();
+
+	    return new PageImpl<>(typedQuery.getResultList(), pageable, total);
+	}
+
+	@Override
+	public List<SpWorkers> getWorkersByCategory(String category, String spId, String workerId, String phno, String location, String workerAvail, String workerName) {
+	    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+	    CriteriaQuery<SpWorkers> query = cb.createQuery(SpWorkers.class);
+	    Root<SpWorkers> root = query.from(SpWorkers.class);
+	    List<Predicate> predicates = new ArrayList<>();
+
+	    if (category != null && !category.trim().isEmpty()) {
+	        predicates.add(cb.equal(root.get("serviceCategory"), category));
+	    }
 	    if (spId != null && !spId.trim().isEmpty()) {
 	        predicates.add(cb.equal(root.get("servicePersonId"), spId));
 	    }

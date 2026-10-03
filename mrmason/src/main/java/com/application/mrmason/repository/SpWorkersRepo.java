@@ -18,5 +18,7 @@ public interface SpWorkersRepo extends JpaRepository<SpWorkers,String>{
 	List<SpWorkers> findByWorkerId(String workerId);
 	@Query("SELECT s FROM SpWorkers s WHERE s.workerId = :workerId")
 	SpWorkers findByWorkerIdOne(@Param("workerId") String workerId);
+	
+	List<SpWorkers> findByServiceCategory(String serviceCategory);
 
 }
