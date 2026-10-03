@@ -10,6 +10,9 @@ import com.application.mrmason.enums.Status;
 
 import jakarta.transaction.Transactional;
 
+import java.util.List;
+import java.util.Optional;
+
 
 public interface MaterialSupplierQuotationHeaderRepository extends JpaRepository<MaterialSupplierQuotationHeader, String> {
 
@@ -20,6 +23,17 @@ public interface MaterialSupplierQuotationHeaderRepository extends JpaRepository
 	                                         @Param("invoiceStatus") Status invoiceStatus,
 	                                         @Param("invoiceNumber") String invoiceNumber);
 
+	@Query("SELECT h FROM MaterialSupplierQuotationHeader h WHERE h.cmatRequestId = :cmatRequestId AND h.supplierId = :supplierId")
+	MaterialSupplierQuotationHeader findByCmatRequestIdAndSupplierId(@Param("cmatRequestId") String cmatRequestId, @Param("supplierId") String supplierId);
+
+	List<MaterialSupplierQuotationHeader> findBySupplierId(String supplierId);
+
 	MaterialSupplierQuotationHeader findByCmatRequestId(String cmatRequestId);
+
+	@Query("SELECT q.quotationId FROM MaterialSupplierQuotationHeader q " +
+			"WHERE q.quotationId LIKE CONCAT(:prefix, '%') " +
+			"ORDER BY q.quotationId DESC LIMIT 1")
+	Optional<String> findLastQuotationIdByPrefix(@Param("prefix") String prefix);
+
 
 }

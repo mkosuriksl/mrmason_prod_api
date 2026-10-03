@@ -1,5 +1,6 @@
 package com.application.mrmason.dto;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,7 +39,7 @@ Optional<CustomerOrderHdrEntity> findActiveCartByUpdatedBy(
 );
 
 
-
+	List<CustomerOrderDetailsEntity> findAllByOrderlineIdIn(Collection<String> orderlineIds);
 
 
 
