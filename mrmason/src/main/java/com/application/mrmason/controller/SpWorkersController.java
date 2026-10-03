@@ -104,7 +104,7 @@ public class SpWorkersController {
 	        @RequestParam(required = false) String workerAvail,
 			@RequestParam(required = false) String serviceCategory,
 	        @RequestParam(defaultValue = "0") int page,
-	        @RequestParam(defaultValue = "10") int size) {
+	        @RequestParam(defaultValue = "1") int size) {
 
 	    Pageable pageable = PageRequest.of(page, size);
 	    Page<SpWorkers> workersPage = service.getWorkers(spId, workerId, phno, location, workerAvail,serviceCategory, pageable);
