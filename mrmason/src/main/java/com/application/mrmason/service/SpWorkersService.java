@@ -10,10 +10,12 @@ import com.application.mrmason.entity.SpWorkers;
 
 public interface SpWorkersService {
 	String addWorkers(SpWorkers worker);
-	public Page<SpWorkers> getWorkers(String spId, String workerId, String phno, String location, String workerAvail, Pageable pageable);
-    String updateWorkers(SpWorkersDto worker); 
+	public Page<SpWorkers> getWorkers(String spId, String workerId, String phno, String location, String workerAvail, String serviceCategory, Pageable pageable);
+	public Page<SpWorkers> getWorkersByCategory(String category, String spId, String workerId, String phno, String location, String workerAvail, Pageable pageable);
+    String updateWorkers(SpWorkersDto worker);
     SpWorkersDto getDetails(String phno,String email);
     public SpWorkers getWorkerById(String workerId);
 	public List<SpWorkers> getWorkersWithoutPagination(
 	        String spId, String workerId, String phno, String location, String workerAvail,String workerName);
+	public List<SpWorkers> getWorkersByCategory(String category, String spId, String workerId, String phno, String location, String workerAvail,String workerName);
 }

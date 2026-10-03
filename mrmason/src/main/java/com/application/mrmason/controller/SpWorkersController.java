@@ -102,11 +102,12 @@ public class SpWorkersController {
 	        @RequestParam(required = false) String phno,
 	        @RequestParam(required = false) String location,
 	        @RequestParam(required = false) String workerAvail,
+			@RequestParam(required = false) String serviceCategory,
 	        @RequestParam(defaultValue = "0") int page,
 	        @RequestParam(defaultValue = "10") int size) {
 
 	    Pageable pageable = PageRequest.of(page, size);
-	    Page<SpWorkers> workersPage = service.getWorkers(spId, workerId, phno, location, workerAvail, pageable);
+	    Page<SpWorkers> workersPage = service.getWorkers(spId, workerId, phno, location, workerAvail,serviceCategory, pageable);
 
 	    ResponsesGetWorkerDto response = new ResponsesGetWorkerDto();
 	    response.setMessage("Worker details retrieved successfully.");
@@ -134,6 +135,53 @@ public class SpWorkersController {
 
 	    List<SpWorkers> workersList = service.getWorkersWithoutPagination(
 	            spId, workerId, phno, location, workerAvail,workerName);
+
+	    WorkerListResponseDto response = new WorkerListResponseDto();
+	    response.setMessage("Worker details retrieved successfully.");
+	    response.setStatus(true);
+	    response.setWorkersData(workersList);
+	    return new ResponseEntity<>(response, HttpStatus.OK);
+	}
+
+	@GetMapping("/getWorkerDetailsByCategory")
+	public ResponseEntity<ResponsesGetWorkerDto> getWorkersByCategory(
+	        @RequestParam String category,
+	        @RequestParam(required = false) String spId,
+	        @RequestParam(required = false) String workerId,
+	        @RequestParam(required = false) String phno,
+	        @RequestParam(required = false) String location,
+	        @RequestParam(required = false) String workerAvail,
+	        @RequestParam(defaultValue = "0") int page,
+	        @RequestParam(defaultValue = "10") int size) {
+
+	    Pageable pageable = PageRequest.of(page, size);
+	    Page<SpWorkers> workersPage = service.getWorkersByCategory(category, spId, workerId, phno, location, workerAvail, pageable);
+
+	    ResponsesGetWorkerDto response = new ResponsesGetWorkerDto();
+	    response.setMessage("Worker details retrieved successfully.");
+	    response.setStatus(true);
+	    response.setWorkersData(workersPage.getContent());
+	    response.setUserData(null);
+
+	    response.setCurrentPage(workersPage.getNumber());
+	    response.setPageSize(workersPage.getSize());
+	    response.setTotalElements(workersPage.getTotalElements());
+	    response.setTotalPages(workersPage.getTotalPages());
+
+	    return new ResponseEntity<>(response, HttpStatus.OK);
+	}
+
+	@GetMapping("/getWorkerDetailsByCategoryWithoutPagination")
+	public ResponseEntity<WorkerListResponseDto> getWorkersByCategoryWithoutPagination(
+	        @RequestParam String category,
+	        @RequestParam(required = false) String spId,
+	        @RequestParam(required = false) String workerId,
+	        @RequestParam(required = false) String phno,
+	        @RequestParam(required = false) String location,
+	        @RequestParam(required = false) String workerAvail,
+	        @RequestParam(required = false) String workerName) {
+
+	    List<SpWorkers> workersList = service.getWorkersByCategory(category, spId, workerId, phno, location, workerAvail, workerName);
 
 	    WorkerListResponseDto response = new WorkerListResponseDto();
 	    response.setMessage("Worker details retrieved successfully.");
