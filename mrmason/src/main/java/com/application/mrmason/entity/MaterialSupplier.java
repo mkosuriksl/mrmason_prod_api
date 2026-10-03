@@ -2,31 +2,30 @@ package com.application.mrmason.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 import com.application.mrmason.enums.Status;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
 @Entity
+
 @Table(name = "material_supplier_quotation_details")
 public class MaterialSupplier {
 
-
 	@Id
 	@Column(name = "material_line_item")
-	private String materialLineItem;
+	private String materialLineItem; 
 
-	@Column(name = "qutotation_id_lineid")
-	private String quotationIdLineId;
-
-	@Column(name = "quotation_id")
-	private String quotationId;
+	@Column(name = "qutotation_id")
+	private String quotationId; 
 
 	@Column(name = "cmatmaterial_requestid")
 	private String cmatRequestId; 
@@ -39,7 +38,6 @@ public class MaterialSupplier {
 
 	@Column(name = "quoted_amount")
 	private BigDecimal quotedAmount;
-	
 	@Column(name = "supplier_id")
 	private String supplierId; 
 
@@ -77,14 +75,5 @@ public class MaterialSupplier {
         if (this.updatedDate == null) {
             this.updatedDate = LocalDate.now();
         }
-        // Generate default value for qutotation_id_lineid if not set
-        if (this.quotationIdLineId == null) {
-            String timePrefix = "QT" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-            this.quotationIdLineId = timePrefix + String.format("%02d", 1) + "_" + String.format("%04d", 1);
-        }
     }
-
-	public MaterialSupplier() {
-	}
-
 }

@@ -1,12 +1,10 @@
 package com.application.mrmason.repository;
 
 import java.time.LocalDate;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-import com.application.mrmason.entity.CustomerRetailerOrderDetailsEntity;
 import com.application.mrmason.entity.CxMaterialQuotationRequestHeaderDetails;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -29,7 +27,6 @@ public interface CustomerRetailerOrderHdrRepo extends JpaRepository<CustomerReta
 	List<CustomerRetailerOrderHdrEntity> findByOrderStatus(OrderStatus orderStatus);
 
 	List<CustomerRetailerOrderHdrEntity> findByRetailerId(String retailerId);
-
 
 
  // home page customer material requests query

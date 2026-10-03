@@ -1,9 +1,7 @@
 package com.application.mrmason.repository;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -91,11 +89,7 @@ public interface MaterialSupplierQuotationUserDAO extends JpaRepository<Material
 	        @Param("supplierIds") List<String> supplierIds,
 	        @Param("safeInput") String safeInput);
 
-/*	@Query("SELECT q.materialLineItem FROM MaterialSupplierQuotationUser q " +
-			"WHERE q.bodSeqNo = :supplierId AND q.materialLineItem IN :lineItemIds")
-	Set<String> findExistingLineItemIdsForSupplier(
-			@Param("supplierId") String supplierId,r
-			@Param("lineItemIds") Collection<String> lineItemIds);*/
+
 
 
 }
