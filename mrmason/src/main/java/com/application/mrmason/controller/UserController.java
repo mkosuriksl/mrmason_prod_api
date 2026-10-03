@@ -248,9 +248,9 @@ public class UserController {
 	}
 
 	@PostMapping("/sp-login")
-	public ResponseEntity<?> login(@RequestBody LoginRequest login, RegSource regSource) {
+	public ResponseEntity<?> login(@RequestBody LoginRequest login) {
 		try {
-			ResponseSpLoginDto response = userService.loginDetails(login, regSource);
+			ResponseSpLoginDto response = userService.loginDetails(login, login.getRegSource());
 			if (response.getJwtToken() != null) {
 				return new ResponseEntity<>(response, HttpStatus.OK);
 			}
